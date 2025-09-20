@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "770011628536",
+    "project_id": "aarogya-sahayak-275ca",
+    "storage_bucket": "aarogya-sahayak-275ca.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:770011628536:android:b134e1ca330d312ea18c0d",
+        "android_client_info": {
+          "package_name": "com.example.aarogya_sahayak"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBpolN3ihXBdz1YsWcPssl7brfCu8_vW4E"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
