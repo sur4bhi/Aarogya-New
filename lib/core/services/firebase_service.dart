@@ -59,8 +59,8 @@ class FirebaseService {
     }
   }
   
-  // Update user profile
-  static Future<void> updateUserProfile({
+  // Update FirebaseAuth user's basic profile (displayName, photoURL)
+  static Future<void> updateAuthProfile({
     String? displayName,
     String? photoURL,
   }) async {
