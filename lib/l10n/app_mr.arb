@@ -2,5 +2,14 @@
   "appName": "आरोग्य सहाय्यक",
   "hello": "नमस्कार",
   "login": "लॉगिन",
-  "register": "नोंदणी"
+  "register": "नोंदणी",
+  "selectLanguage": "आपली पसंतीची भाषा निवडा",
+  "continueLabel": "पुढे",
+  "skipForNow": "आत्ता वगळा",
+  "languageChanged": "भाषा यशस्वीरित्या बदलली",
+  "english": "English",
+  "hindi": "हिंदी",
+  "marathi": "मराठी",
+  "settings": "सेटिंग्स",
+  "language": "भाषा"
 }

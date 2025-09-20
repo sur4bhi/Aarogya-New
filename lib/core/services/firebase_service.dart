@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'dart:io';
@@ -158,7 +159,9 @@ class FirebaseService {
     String collection,
     Map<String, dynamic> data,
   ) async {
-    return await _firestore.collection(collection).add(data);
+    return await _executeWithRetry<DocumentReference>(() async {
+      return await _firestore.collection(collection).add(data);
+    });
   }
   
   // Batch write
@@ -271,10 +274,12 @@ class FirebaseService {
   
   // Get user vitals
   static Future<QuerySnapshot> getUserVitals(String userId) async {
-    return await _firestore
-        .collection('users/$userId/vitals')
-        .orderBy('timestamp', descending: true)
-        .get();
+    return await _executeWithRetry<QuerySnapshot>(() async {
+      return await _firestore
+          .collection('users/$userId/vitals')
+          .orderBy('timestamp', descending: true)
+          .get();
+    });
   }
   
   // Stream user vitals
@@ -348,6 +353,20 @@ class FirebaseService {
 }
 
 // Helper classes
+// Retry wrapper for Firebase operations to improve resilience
+Future<T> _executeWithRetry<T>(Future<T> Function() operation, {int retries = 3}) async {
+  int attempts = retries;
+  while (attempts > 0) {
+    try {
+      return await operation();
+    } on FirebaseException catch (_) {
+      attempts--;
+      if (attempts == 0) rethrow;
+      await Future.delayed(const Duration(seconds: 2));
+    }
+  }
+  throw Exception('Operation failed after retries');
+}
 class QueryFilter {
   final String field;
   final dynamic value;

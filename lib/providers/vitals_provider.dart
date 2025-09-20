@@ -179,4 +179,15 @@ class VitalsProvider extends ChangeNotifier {
         break;
     }
   }
+
+  Future<void> forceSync() async {
+    try {
+      await SyncService.forceSync();
+      await loadVitalsHistory();
+    } catch (e) {
+      _errorMessage = e.toString();
+      notifyListeners();
+      rethrow;
+    }
+  }
 }

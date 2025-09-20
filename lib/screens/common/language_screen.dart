@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import '../../core/constants.dart';
 import '../../core/routes.dart';
 import '../../core/services/local_storage.dart';
-
-// TODO: import 'package:provider/provider.dart';
-// TODO: import '../../providers/language_provider.dart';
+import 'package:provider/provider.dart';
+import '../../providers/language_provider.dart';
+import '../../l10n/app_localizations.dart';
 
 /// Language selection screen used for first run or settings.
 /// - Allows user to pick English/Hindi/Marathi.
@@ -24,14 +24,19 @@ class _LanguageScreenState extends State<LanguageScreen> {
     setState(() {
       _selected = code;
     });
-    // TODO: context.read<LanguageProvider>().setLocale(code);
+    context.read<LanguageProvider>().setLanguage(code);
   }
 
   Future<void> _confirm() async {
-    await LocalStorageService.saveLanguage(_selected);
+    await context.read<LanguageProvider>().setLanguage(_selected);
+    await LocalStorageService.setFirstTimeLaunch(false);
     if (!mounted) return;
     // In onboarding flow, go to auth; if from settings, pop
-    AppRoutes.navigateToAuth(context);
+    if (Navigator.canPop(context)) {
+      Navigator.pop(context, _selected);
+    } else {
+      AppRoutes.navigateToAuth(context);
+    }
   }
 
   Widget _preview(String code) {
@@ -47,44 +52,45 @@ class _LanguageScreenState extends State<LanguageScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // final l10n = context.l10n; // TODO: generated l10n
+    final l10n = AppLocalizations.of(context)!;
+    final isFirstFlow = LocalStorageService.isFirstTimeLaunch();
     return Scaffold(
-      appBar: AppBar(title: const Text('Select Language')), // TODO: l10n.selectLanguage
+      appBar: AppBar(title: Text(l10n.selectLanguage)),
       body: ListView(
         padding: const EdgeInsets.all(AppDimensions.paddingMedium),
         children: [
           // English
           Semantics(
-            label: 'English option selected: ${false}', // TODO: Announce via l10n
+            label: '${l10n.english} option',
             child: RadioListTile<String>(
               value: 'en',
               groupValue: _selected,
               onChanged: (v) => _onSelect(v ?? 'en'),
-              title: const Text('English'),
+              title: Text(l10n.english),
               subtitle: _preview('en'),
               secondary: const Icon(Icons.language),
             ),
           ),
           // Hindi
           Semantics(
-            label: 'Hindi option',
+            label: '${l10n.hindi} option',
             child: RadioListTile<String>(
               value: 'hi',
               groupValue: _selected,
               onChanged: (v) => _onSelect(v ?? 'hi'),
-              title: const Text('हिन्दी'),
+              title: Text(l10n.hindi),
               subtitle: _preview('hi'),
               secondary: const Icon(Icons.translate),
             ),
           ),
           // Marathi
           Semantics(
-            label: 'Marathi option',
+            label: '${l10n.marathi} option',
             child: RadioListTile<String>(
               value: 'mr',
               groupValue: _selected,
               onChanged: (v) => _onSelect(v ?? 'mr'),
-              title: const Text('मराठी'),
+              title: Text(l10n.marathi),
               subtitle: _preview('mr'),
               secondary: const Icon(Icons.text_fields),
             ),
@@ -94,9 +100,22 @@ class _LanguageScreenState extends State<LanguageScreen> {
             width: double.infinity,
             child: ElevatedButton(
               onPressed: _confirm,
-              child: const Text('Confirm'), // TODO: l10n.confirm
+              child: Text(l10n.continueLabel),
             ),
           ),
+          if (isFirstFlow) ...[
+            const SizedBox(height: 8),
+            TextButton(
+              onPressed: () async {
+                // Default to English and proceed
+                await context.read<LanguageProvider>().setLanguage('en');
+                await LocalStorageService.setFirstTimeLaunch(false);
+                if (!mounted) return;
+                AppRoutes.navigateToAuth(context);
+              },
+              child: Text(l10n.skipForNow),
+            ),
+          ],
         ],
       ),
     );

@@ -2,5 +2,14 @@
   "appName": "Aarogya Sahayak",
   "hello": "Hello",
   "login": "Login",
-  "register": "Register"
+  "register": "Register",
+  "selectLanguage": "Select your preferred language",
+  "continueLabel": "Continue",
+  "skipForNow": "Skip for now",
+  "languageChanged": "Language changed successfully",
+  "english": "English",
+  "hindi": "Hindi",
+  "marathi": "Marathi",
+  "settings": "Settings",
+  "language": "Language"
 }
