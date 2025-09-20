@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../core/constants.dart';
 import '../../core/routes.dart';
 import '../../core/utils/validators.dart';
-
-// TODO: import 'package:provider/provider.dart';
-// TODO: import '../../providers/auth_provider.dart';
+import '../../providers/auth_provider.dart';
 
 /// Auth screen with two flows: Phone OTP and Email login.
 /// - Validates inputs via `Validators`.
@@ -60,7 +59,7 @@ class _AuthScreenState extends State<AuthScreen>
     try {
       if (!_phoneFormKey.currentState!.validate()) return;
       final phone = _phoneCtrl.text.trim();
-      // TODO: await context.read<AuthProvider>().sendOtp(phone);
+      await context.read<AuthProvider>().sendOtp('+91$phone');
       setState(() => _showInlineOtp = true);
     } catch (e) {
       setState(() => _phoneError = e.toString());
@@ -76,7 +75,7 @@ class _AuthScreenState extends State<AuthScreen>
     });
     try {
       final otp = _otpCtrl.text.trim();
-      // TODO: await context.read<AuthProvider>().verifyOtp(otp);
+      await context.read<AuthProvider>().verifyOtp(otp);
       if (!mounted) return;
       AppRoutes.navigateToUserDashboard(context);
     } catch (e) {
@@ -95,7 +94,9 @@ class _AuthScreenState extends State<AuthScreen>
       if (!_emailFormKey.currentState!.validate()) return;
       final email = _emailCtrl.text.trim();
       final password = _passwordCtrl.text.trim();
-      // TODO: await context.read<AuthProvider>().signInWithEmail(email, password);
+      await context
+          .read<AuthProvider>()
+          .signInWithEmailAndPassword(email: email, password: password);
       if (!mounted) return;
       AppRoutes.navigateToUserDashboard(context);
     } catch (e) {

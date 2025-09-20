@@ -1,15 +1,32 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:provider/provider.dart';
+// import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+
+import 'firebase_options.dart';
 import 'core/theme.dart';
 import 'core/routes.dart';
+import 'core/services/notification_service.dart';
+import 'core/services/local_storage.dart';
+import 'core/services/sync_service.dart';
+import 'providers/auth_provider.dart';
+import 'providers/vitals_provider.dart';
+import 'providers/user_provider.dart';
+import 'providers/connectivity_provider.dart';
+import 'providers/language_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Initialize Firebase first2
+  // Initialize Firebase with platform-specific options
   await Firebase.initializeApp(
-    //options: DefaultFirebaseOptions.currentPlatform,
+    options: DefaultFirebaseOptions.currentPlatform,
   );
+
+  // Initialize core services
+  await NotificationService.init();
+  await LocalStorageService.init();
+  await SyncService.init();
 
   runApp(const MyApp());
 }
@@ -20,18 +37,32 @@ class MyApp extends StatelessWidget {
   // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Aarogya Sahayak',
-      debugShowCheckedModeBanner: false,
-      theme: AppTheme.lightTheme.copyWith(
-        extensions: const [HealthColors.light],
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => AuthProvider()),
+        ChangeNotifierProvider(create: (_) => UserProvider()),
+        ChangeNotifierProvider(create: (_) => VitalsProvider()),
+        ChangeNotifierProvider(create: (_) => ConnectivityProvider()),
+        ChangeNotifierProvider(create: (_) => LanguageProvider()),
+      ],
+      child: Builder(
+        builder: (context) {
+          return MaterialApp(
+            title: 'Aarogya Sahayak',
+            debugShowCheckedModeBanner: false,
+            theme: AppTheme.lightTheme.copyWith(
+              extensions: const [HealthColors.light],
+            ),
+            darkTheme: AppTheme.darkTheme.copyWith(
+              extensions: const [HealthColors.dark],
+            ),
+            // localizationsDelegates: AppLocalizations.localizationsDelegates,
+            // supportedLocales: AppLocalizations.supportedLocales,
+            initialRoute: AppRoutes.splash,
+            onGenerateRoute: AppRoutes.generateRoute,
+          );
+        },
       ),
-      darkTheme: AppTheme.darkTheme.copyWith(
-        extensions: const [HealthColors.dark],
-      ),
-      initialRoute: AppRoutes.splash,
-      onGenerateRoute: AppRoutes.generateRoute,
     );
   }
 }
-

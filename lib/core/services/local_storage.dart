@@ -1,4 +1,5 @@
 import 'package:hive/hive.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import '../constants.dart';
@@ -10,17 +11,27 @@ class LocalStorageService {
   static late Box _remindersBox;
   static late Box _reportsBox;
   static late Box _settingsBox;
+  static bool _hiveInitialized = false;
   
   // Initialize storage
   static Future<void> init() async {
     _prefs = await SharedPreferences.getInstance();
     
     // Initialize Hive boxes
+    await Hive.initFlutter();
+    _hiveInitialized = true;
     _userBox = await Hive.openBox('user_data');
     _vitalsBox = await Hive.openBox('vitals_data');
     _remindersBox = await Hive.openBox('reminders_data');
     _reportsBox = await Hive.openBox('reports_data');
     _settingsBox = await Hive.openBox('settings_data');
+  }
+
+  static Future<void> _ensureHiveInitialized() async {
+    if (!_hiveInitialized) {
+      await Hive.initFlutter();
+      _hiveInitialized = true;
+    }
   }
   
   // SharedPreferences methods for simple key-value storage
@@ -292,17 +303,20 @@ class LocalStorageService {
   
   // Offline data management
   static Future<void> saveOfflineData(String key, Map<String, dynamic> data) async {
+    await _ensureHiveInitialized();
     final offlineBox = await Hive.openBox('offline_data');
     await offlineBox.put(key, data);
   }
   
   static Future<Map<String, dynamic>?> getOfflineData(String key) async {
+    await _ensureHiveInitialized();
     final offlineBox = await Hive.openBox('offline_data');
     final data = offlineBox.get(key);
     return data != null ? Map<String, dynamic>.from(data) : null;
   }
   
   static Future<List<Map<String, dynamic>>> getAllOfflineData() async {
+    await _ensureHiveInitialized();
     final offlineBox = await Hive.openBox('offline_data');
     return offlineBox.values
         .map((e) => Map<String, dynamic>.from(e))
@@ -310,12 +324,14 @@ class LocalStorageService {
   }
   
   static Future<void> clearOfflineData() async {
+    await _ensureHiveInitialized();
     final offlineBox = await Hive.openBox('offline_data');
     await offlineBox.clear();
   }
   
   // Cache management
   static Future<void> saveToCache(String key, Map<String, dynamic> data, {Duration? expiry}) async {
+    await _ensureHiveInitialized();
     final cacheBox = await Hive.openBox('cache_data');
     final cacheData = {
       'data': data,
@@ -326,6 +342,7 @@ class LocalStorageService {
   }
   
   static Future<Map<String, dynamic>?> getFromCache(String key) async {
+    await _ensureHiveInitialized();
     final cacheBox = await Hive.openBox('cache_data');
     final cacheData = cacheBox.get(key);
     
@@ -346,6 +363,7 @@ class LocalStorageService {
   }
   
   static Future<void> clearCache() async {
+    await _ensureHiveInitialized();
     final cacheBox = await Hive.openBox('cache_data');
     await cacheBox.clear();
   }

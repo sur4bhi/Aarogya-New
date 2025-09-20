@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../core/constants.dart';
 import '../../core/routes.dart';
+import '../../models/vitals_model.dart';
 import '../../widgets/common/offline_banner.dart';
 import '../../widgets/user/vitals_card.dart';
 import '../../widgets/user/health_article_card.dart';
-
-// TODO: import 'package:provider/provider.dart';
-// TODO: import '../../providers/user_provider.dart';
-// TODO: import '../../providers/connectivity_provider.dart';
-// TODO: import '../../core/services/sync_service.dart';
+import '../../providers/vitals_provider.dart';
+import '../../providers/connectivity_provider.dart';
+import '../../core/services/sync_service.dart';
 
 /// User Dashboard
 /// - Shows greeting, quick actions, vitals summary, health feed preview.
@@ -22,18 +22,26 @@ class UserDashboardScreen extends StatefulWidget {
 }
 
 class _UserDashboardScreenState extends State<UserDashboardScreen> {
+  @override
+  void initState() {
+    super.initState();
+    // Load vitals on first build
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<VitalsProvider>().loadVitalsHistory();
+    });
+  }
+
   Future<void> _refresh() async {
-    // TODO: await context.read<UserProvider>().refreshDashboard();
-    // TODO: Optionally call SyncService.forceSync() if online
-    await Future<void>.delayed(const Duration(milliseconds: 600));
+    await context.read<VitalsProvider>().loadVitalsHistory();
+    if (SyncService.isOnline) {
+      await SyncService.forceSync();
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    // final user = context.watch<UserProvider>().profile; // TODO
-    // final isOnline = context.watch<ConnectivityProvider>().isOnline; // TODO
-    final isOnline = true;
-    final greeting = 'Hello'; // TODO: l10n with user name
+    final isOnline = context.watch<ConnectivityProvider>().isOnline;
+    final greeting = 'Hello';
 
     return Scaffold(
       appBar: AppBar(
@@ -129,35 +137,75 @@ class _UserDashboardScreenState extends State<UserDashboardScreen> {
   }
 
   Widget _vitalsSummary(BuildContext context) {
-    // TODO: Pull latest vitals from VitalsProvider
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    return Consumer<VitalsProvider>(
+      builder: (context, provider, _) {
+        if (provider.isLoading) {
+          return const Center(child: Padding(
+            padding: EdgeInsets.all(16.0),
+            child: CircularProgressIndicator(),
+          ));
+        }
+
+        final history = provider.vitalsHistory;
+
+        String bpValue = '--';
+        String glucoseValue = '--';
+        String weightValue = '--';
+
+        // Find latest entries for each type
+        final latestBp = history.firstWhere(
+          (v) => v.type == VitalType.bloodPressure && v.systolicBP != null && v.diastolicBP != null,
+          orElse: () => provider.latestVitals ?? (history.isNotEmpty ? history.first : null as dynamic),
+        );
+        if (latestBp is VitalsModel && latestBp.type == VitalType.bloodPressure) {
+          bpValue = latestBp.bloodPressureString;
+        }
+
+        final latestGlucose = history.firstWhere(
+          (v) => v.type == VitalType.bloodGlucose && v.bloodGlucose != null,
+          orElse: () => provider.latestVitals ?? (history.isNotEmpty ? history.first : null as dynamic),
+        );
+        if (latestGlucose is VitalsModel && latestGlucose.type == VitalType.bloodGlucose) {
+          glucoseValue = latestGlucose.bloodGlucose!.toStringAsFixed(0);
+        }
+
+        final latestWeight = history.firstWhere(
+          (v) => v.type == VitalType.weight && v.weight != null,
+          orElse: () => provider.latestVitals ?? (history.isNotEmpty ? history.first : null as dynamic),
+        );
+        if (latestWeight is VitalsModel && latestWeight.type == VitalType.weight) {
+          weightValue = latestWeight.weight!.toStringAsFixed(1);
+        }
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Latest Vitals', style: AppTextStyles.headline3), // TODO: l10n
-            TextButton(
-              onPressed: () => AppRoutes.navigateToVitalsTrends(context),
-              child: const Text('See trends'), // TODO
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text('Latest Vitals', style: AppTextStyles.headline3),
+                TextButton(
+                  onPressed: () => AppRoutes.navigateToVitalsTrends(context),
+                  child: const Text('See trends'),
+                ),
+              ],
             ),
+            Row(
+              children: [
+                Expanded(
+                  child: VitalsCard(title: 'Blood Pressure', value: bpValue, unit: 'mmHg'),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: VitalsCard(title: 'Blood Sugar', value: glucoseValue, unit: 'mg/dL'),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            VitalsCard(title: 'Weight', value: weightValue, unit: 'kg'),
           ],
-        ),
-        Row(
-          children: const [
-            Expanded(
-              child: VitalsCard(title: 'Blood Pressure', value: '120/80', unit: 'mmHg'),
-            ),
-            SizedBox(width: 8),
-            Expanded(
-              child: VitalsCard(title: 'Blood Sugar', value: '96', unit: 'mg/dL'),
-            ),
-          ],
-        ),
-        const SizedBox(height: 8),
-        const VitalsCard(title: 'Weight', value: '68', unit: 'kg'),
-        // TODO: trend arrows and colors based on HealthUtils
-      ],
+        );
+      },
     );
   }
 

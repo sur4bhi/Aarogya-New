@@ -12,13 +12,11 @@
 /// - Localization strings reference: context.l10n.splashWelcome (TODO)
 
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../core/constants.dart';
 import '../../core/routes.dart';
 import '../../core/services/local_storage.dart';
-
-// TODO: import 'package:provider/provider.dart';
-// TODO: import '../../providers/auth_provider.dart';
-// TODO: import '../../providers/user_provider.dart';
+import '../../providers/auth_provider.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -53,21 +51,20 @@ class _SplashScreenState extends State<SplashScreen>
       _error = null;
     });
     try {
-      // Initialize local storage
-      await LocalStorageService.init();
+      // Optional branding delay
+      await Future<void>.delayed(const Duration(seconds: 2));
 
-      // TODO: Initialize localization if needed
-      // final localeCode = LocalStorageService.getLanguage();
-      // context.read<LanguageProvider>().setLocale(localeCode);
-
-      // TODO: Check auth state from AuthProvider
-      // final isLoggedIn = context.read<AuthProvider>().isLoggedIn;
-      final isLoggedIn = false; // TODO replace with provider value
+      // Determine first-time and auth state
+      final isFirstTime = LocalStorageService.isFirstTimeLaunch();
+      final isLoggedIn = context.read<AuthProvider>().isLoggedIn;
 
       if (!mounted) return;
+      if (isFirstTime) {
+        AppRoutes.navigateToLanguage(context);
+        return;
+      }
+
       if (isLoggedIn) {
-        // TODO: Optionally prefetch minimal dashboard data via UserProvider
-        // await context.read<UserProvider>().refreshDashboard();
         AppRoutes.navigateToUserDashboard(context);
       } else {
         AppRoutes.navigateToAuth(context);

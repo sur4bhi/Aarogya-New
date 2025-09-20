@@ -1,13 +1,14 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'firebase_service.dart';
 import 'local_storage.dart';
 import '../constants.dart';
 
 class SyncService {
   static final Connectivity _connectivity = Connectivity();
-  static StreamSubscription<ConnectivityResult>? _connectivitySubscription;
+  static StreamSubscription<List<ConnectivityResult>>? _connectivitySubscription;
   static Timer? _syncTimer;
   static bool _isOnline = false;
   static bool _isSyncing = false;
@@ -18,8 +19,8 @@ class SyncService {
   // Initialize sync service
   static Future<void> init() async {
     // Check initial connectivity
-    final connectivityResult = await _connectivity.checkConnectivity();
-    _isOnline = connectivityResult != ConnectivityResult.none;
+    final results = await _connectivity.checkConnectivity();
+    _isOnline = results.isNotEmpty && !results.contains(ConnectivityResult.none);
     
     // Listen to connectivity changes
     _connectivitySubscription = _connectivity.onConnectivityChanged.listen(
@@ -42,9 +43,9 @@ class SyncService {
   }
   
   // Handle connectivity changes
-  static void _onConnectivityChanged(ConnectivityResult result) async {
+  static void _onConnectivityChanged(List<ConnectivityResult> results) async {
     final wasOnline = _isOnline;
-    _isOnline = result != ConnectivityResult.none;
+    _isOnline = results.isNotEmpty && !results.contains(ConnectivityResult.none);
     
     if (!wasOnline && _isOnline) {
       // Just came online, sync all pending data
@@ -161,10 +162,20 @@ class SyncService {
       for (final doc in remoteVitals.docs) {
         final data = doc.data() as Map<String, dynamic>;
         data['id'] = doc.id;
-        
+
+        // Normalize Firestore Timestamp to DateTime if present
+        DateTime? ts;
+        final rawTs = data['timestamp'];
+        if (rawTs is Timestamp) {
+          ts = rawTs.toDate();
+        } else if (rawTs is String) {
+          ts = DateTime.tryParse(rawTs);
+        } else if (rawTs is DateTime) {
+          ts = rawTs;
+        }
+
         // Only save if it's newer than last sync
-        if (lastSyncTime == null || 
-            (data['timestamp'] as DateTime).isAfter(lastSyncTime)) {
+        if (lastSyncTime == null || (ts != null && ts.isAfter(lastSyncTime))) {
           await LocalStorageService.saveVitalsRecord(doc.id, data);
         }
       }
