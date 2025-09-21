@@ -27,6 +27,7 @@ import '../screens/user/queue_booking_screen.dart';
 
 // ASHA screens
 import '../screens/asha/asha_dashboard_screen.dart';
+import '../screens/asha/asha_main_screen.dart';
 import '../screens/asha/patients_list_screen.dart';
 import '../screens/asha/patient_details_screen.dart';
 import '../screens/asha/asha_chat_screen.dart';
@@ -58,8 +59,9 @@ class AppRoutes {
   static const String estimateHemoglobin = '/user/estimate-hemoglobin';
   static const String queueBooking = '/user/queue-booking';
   
-  // ASHA routes
+// ASHA routes
   static const String ashaDashboard = '/asha/dashboard';
+  static const String ashaMain = '/asha/main';
   static const String patientsList = '/asha/patients';
   static const String patientDetails = '/asha/patient-details';
   static const String ashaChat = '/asha/chat';
@@ -197,6 +199,12 @@ class AppRoutes {
           settings: settings,
         );
         
+      case ashaMain:
+        return MaterialPageRoute(
+          builder: (_) => const ASHAMainScreen(),
+          settings: settings,
+        );
+        
       case patientsList:
         return MaterialPageRoute(
           builder: (_) => const PatientsListScreen(),
@@ -263,6 +271,10 @@ class AppRoutes {
   
   static void navigateToAshaDashboard(BuildContext context) {
     Navigator.pushNamedAndRemoveUntil(context, ashaDashboard, (route) => false);
+  }
+  
+  static void navigateToAshaMain(BuildContext context) {
+    Navigator.pushNamedAndRemoveUntil(context, ashaMain, (route) => false);
   }
   
   static void navigateToProfileSetup(BuildContext context) {

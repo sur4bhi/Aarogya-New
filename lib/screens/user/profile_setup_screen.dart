@@ -189,6 +189,15 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(l10n.complete),
+        actions: [
+          TextButton(
+            onPressed: () {
+              // Skip profile setup: leave onboarding incomplete and go to dashboard
+              AppRoutes.navigateToUserDashboard(context);
+            },
+            child: const Text('Skip'),
+          ),
+        ],
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(4),
           child: LinearProgressIndicator(value: progress),
