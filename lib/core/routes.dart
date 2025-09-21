@@ -266,7 +266,7 @@ class AppRoutes {
   }
   
   static void navigateToProfileSetup(BuildContext context) {
-    Navigator.pushNamed(context, profileSetup);
+    Navigator.pushNamedAndRemoveUntil(context, profileSetup, (route) => false);
   }
   
   static void navigateToAshaConnect(BuildContext context) {

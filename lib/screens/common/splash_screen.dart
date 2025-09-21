@@ -17,6 +17,7 @@ import '../../core/constants.dart';
 import '../../core/routes.dart';
 import '../../core/services/local_storage.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/user_provider.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -58,11 +59,18 @@ class _SplashScreenState extends State<SplashScreen>
       final isFirstTime = LocalStorageService.isFirstTimeLaunch();
       final isLoggedIn = context.read<AuthProvider>().isLoggedIn;
       final role = LocalStorageService.getSetting('user_role');
+      
+      // Load user profile if logged in
+      if (isLoggedIn) {
+        await context.read<UserProvider>().loadCachedUser();
+      }
+      final hasCompletedOnboarding = isLoggedIn ? context.read<UserProvider>().hasCompletedOnboarding : false;
 
       debugPrint('Splash Screen Debug:');
       debugPrint('  isFirstTime: $isFirstTime');
       debugPrint('  isLoggedIn: $isLoggedIn');
       debugPrint('  role: $role');
+      debugPrint('  hasCompletedOnboarding: $hasCompletedOnboarding');
 
       if (!mounted) return;
       if (isFirstTime) {
@@ -84,7 +92,14 @@ class _SplashScreenState extends State<SplashScreen>
         return;
       }
 
-      // Logged in: go to respective dashboard per selected role
+      // Logged in: check onboarding completion before routing to dashboard
+      if (!hasCompletedOnboarding && role != 'asha') {
+        debugPrint('  Navigating to Profile Setup (onboarding not completed)');
+        AppRoutes.navigateToProfileSetup(context);
+        return;
+      }
+      
+      // Onboarding completed: go to respective dashboard per selected role
       if (role == 'asha') {
         debugPrint('  Navigating to ASHA Dashboard');
         AppRoutes.navigateToAshaDashboard(context);

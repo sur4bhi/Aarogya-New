@@ -29,6 +29,12 @@ class UserProvider extends ChangeNotifier {
     return requiredOk;
   }
 
+  bool get hasCompletedOnboarding {
+    final u = _currentUser;
+    if (u == null) return false;
+    return u.hasCompletedOnboarding;
+  }
+
   double get profileCompletionPercentage {
     final u = _currentUser;
     if (u == null) return 0;

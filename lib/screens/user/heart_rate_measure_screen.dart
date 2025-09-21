@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math';
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:provider/provider.dart';
 import '../../models/vitals_model.dart';
 import '../../providers/auth_provider.dart';
@@ -36,6 +37,18 @@ class _HeartRateMeasureScreenState extends State<HeartRateMeasureScreen> with Wi
 
   Future<void> _initCamera() async {
     try {
+      // Ensure camera permission is granted
+      final status = await Permission.camera.request();
+      if (!status.isGranted) {
+        setState(() { _initializing = false; });
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Camera permission denied')), 
+          );
+        }
+        return;
+      }
+
       final cams = await availableCameras();
       CameraDescription? back;
       for (final c in cams) {
@@ -71,6 +84,10 @@ class _HeartRateMeasureScreenState extends State<HeartRateMeasureScreen> with Wi
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _timer?.cancel();
+    // Try to turn off torch before disposing
+    if (_controller != null && _controller!.value.isInitialized) {
+      _controller!.setFlashMode(FlashMode.off).catchError((_) {});
+    }
     _controller?.dispose();
     super.dispose();
   }
@@ -104,9 +121,15 @@ class _HeartRateMeasureScreenState extends State<HeartRateMeasureScreen> with Wi
   Future<void> _stop() async {
     _timer?.cancel();
     _timer = null;
-    if (_controller?.value.isStreamingImages == true) {
-      await _controller?.stopImageStream();
-    }
+    try {
+      if (_controller?.value.isStreamingImages == true) {
+        await _controller?.stopImageStream();
+      }
+      // Ensure torch is turned off when stopping
+      if (_controller != null && _controller!.value.isInitialized) {
+        await _controller!.setFlashMode(FlashMode.off);
+      }
+    } catch (_) {}
     if (mounted) setState(() { _measuring = false; });
   }
 
