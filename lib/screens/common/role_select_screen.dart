@@ -9,11 +9,12 @@ class RoleSelectScreen extends StatelessWidget {
     debugPrint('Role Select Screen: Role selected: $role');
     await LocalStorageService.saveSetting('user_role', role);
     debugPrint('Role Select Screen: Role saved');
-    // After selecting role, show optional profile setup for user; ASHA -> main screen
+    // After selecting role
     if (role == 'asha') {
       AppRoutes.navigateToAshaMain(context);
     } else {
-      AppRoutes.navigateToProfileSetup(context);
+      // Directly go to User Dashboard (skip Profile Setup)
+      AppRoutes.navigateToUserDashboard(context);
     }
   }
 
