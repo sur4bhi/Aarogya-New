@@ -8,9 +8,13 @@ class RoleSelectScreen extends StatelessWidget {
   Future<void> _select(BuildContext context, String role) async {
     debugPrint('Role Select Screen: Role selected: $role');
     await LocalStorageService.saveSetting('user_role', role);
-    debugPrint('Role Select Screen: Role saved, navigating to Auth');
-    // After selecting role, proceed to authentication; post-auth routing will use saved role
-    AppRoutes.navigateToAuth(context);
+    debugPrint('Role Select Screen: Role saved, navigating to dashboard');
+    // After selecting role, go directly to respective dashboard
+    if (role == 'asha') {
+      AppRoutes.navigateToAshaDashboard(context);
+    } else {
+      AppRoutes.navigateToUserDashboard(context);
+    }
   }
 
   @override

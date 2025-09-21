@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'dart:async';
 
 class AuthProvider extends ChangeNotifier {
   final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -75,26 +76,37 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
-  // Phone Auth: Send OTP
-  Future<void> sendOtp(String phoneNumber) async {
+// Phone Auth: Send OTP (awaits codeSent or verificationFailed)
+  Future<bool> sendOtp(String phoneNumber) async {
     _lastError = null;
+    final completer = Completer<bool>();
     try {
+      final formatted = phoneNumber.startsWith('+') ? phoneNumber : '+$phoneNumber';
       await _auth.verifyPhoneNumber(
-        phoneNumber: phoneNumber,
+        phoneNumber: formatted,
         forceResendingToken: _resendToken,
+        timeout: const Duration(seconds: 60),
         verificationCompleted: (PhoneAuthCredential credential) async {
-          // Auto-retrieval on Android
-          final cred = await _auth.signInWithCredential(credential);
-          _currentUser = cred.user;
-          notifyListeners();
+          try {
+            final cred = await _auth.signInWithCredential(credential);
+            _currentUser = cred.user;
+            if (!completer.isCompleted) completer.complete(true);
+            notifyListeners();
+          } catch (e) {
+            _lastError = e.toString();
+            if (!completer.isCompleted) completer.complete(false);
+            notifyListeners();
+          }
         },
         verificationFailed: (FirebaseAuthException e) {
           _lastError = _mapAuthError(e);
+          if (!completer.isCompleted) completer.complete(false);
           notifyListeners();
         },
         codeSent: (String verificationId, int? resendToken) {
           _verificationId = verificationId;
           _resendToken = resendToken;
+          if (!completer.isCompleted) completer.complete(true);
           notifyListeners();
         },
         codeAutoRetrievalTimeout: (String verificationId) {
@@ -104,12 +116,17 @@ class AuthProvider extends ChangeNotifier {
     } on FirebaseAuthException catch (e) {
       _lastError = _mapAuthError(e);
       notifyListeners();
-      rethrow;
+      if (!completer.isCompleted) completer.complete(false);
     } catch (e) {
       _lastError = e.toString();
       notifyListeners();
-      rethrow;
+      if (!completer.isCompleted) completer.complete(false);
     }
+    return completer.future;
+  }
+
+  Future<bool> resendOtp(String phoneNumber) async {
+    return sendOtp(phoneNumber);
   }
 
   // Phone Auth: Verify OTP

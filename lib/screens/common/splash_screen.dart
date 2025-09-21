@@ -59,12 +59,18 @@ class _SplashScreenState extends State<SplashScreen>
       final isFirstTime = LocalStorageService.isFirstTimeLaunch();
       final isLoggedIn = context.read<AuthProvider>().isLoggedIn;
       final role = LocalStorageService.getSetting('user_role');
-      
-      // Load user profile if logged in
-      if (isLoggedIn) {
-        await context.read<UserProvider>().loadCachedUser();
+
+      // If not logged in, ALWAYS go to phone verification/auth first
+      if (!isLoggedIn) {
+        if (!mounted) return;
+        debugPrint('  Navigating to Auth Screen (login first)');
+        AppRoutes.navigateToAuth(context);
+        return;
       }
-      final hasCompletedOnboarding = isLoggedIn ? context.read<UserProvider>().hasCompletedOnboarding : false;
+
+      // Load user profile if logged in
+      await context.read<UserProvider>().loadCachedUser();
+      final hasCompletedOnboarding = context.read<UserProvider>().hasCompletedOnboarding;
 
       debugPrint('Splash Screen Debug:');
       debugPrint('  isFirstTime: $isFirstTime');
@@ -73,33 +79,29 @@ class _SplashScreenState extends State<SplashScreen>
       debugPrint('  hasCompletedOnboarding: $hasCompletedOnboarding');
 
       if (!mounted) return;
+
+      // After login, if first launch -> go to Language selection next
       if (isFirstTime) {
-        debugPrint('  Navigating to Language Screen');
+        debugPrint('  Navigating to Language Screen (post-login)');
         AppRoutes.navigateToLanguage(context);
         return;
       }
 
+      // If language set but role not selected yet -> role selection
       if (role == null) {
-        debugPrint('  Navigating to Role Select Screen');
+        debugPrint('  Navigating to Role Select Screen (post-language)');
         AppRoutes.navigateToRoleSelect(context);
         return;
       }
 
-      // If not logged in, go to auth first
-      if (!isLoggedIn) {
-        debugPrint('  Navigating to Auth Screen');
-        AppRoutes.navigateToAuth(context);
-        return;
-      }
-
-      // Logged in: check onboarding completion before routing to dashboard
+      // If patient onboarding not completed, optionally route to profile setup
       if (!hasCompletedOnboarding && role != 'asha') {
         debugPrint('  Navigating to Profile Setup (onboarding not completed)');
         AppRoutes.navigateToProfileSetup(context);
         return;
       }
-      
-      // Onboarding completed: go to respective dashboard per selected role
+
+      // Role selected -> go to respective dashboard
       if (role == 'asha') {
         debugPrint('  Navigating to ASHA Dashboard');
         AppRoutes.navigateToAshaDashboard(context);

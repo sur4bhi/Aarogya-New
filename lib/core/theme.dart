@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'constants.dart';
 
 class AppTheme {
@@ -7,13 +8,15 @@ class AppTheme {
     return ThemeData(
       useMaterial3: true,
       brightness: Brightness.light,
+      scaffoldBackgroundColor: AppColors.background,
+      fontFamily: GoogleFonts.notoSans().fontFamily,
       
       // Color Scheme
       colorScheme: const ColorScheme.light(
         primary: AppColors.primary,
         onPrimary: Colors.white,
         secondary: AppColors.secondary,
-        onSecondary: Colors.white,
+        onSecondary: AppColors.primary,
         surface: AppColors.surface,
         onSurface: AppColors.onSurface,
         background: AppColors.background,
@@ -22,19 +25,19 @@ class AppTheme {
         onError: Colors.white,
       ),
       
-      // App Bar Theme
+      // App Bar Theme (spec: white background, 56dp height)
       appBarTheme: const AppBarTheme(
-        elevation: 0,
+        elevation: AppDimensions.elevationSmall,
         centerTitle: true,
-        backgroundColor: AppColors.primary,
-        foregroundColor: Colors.white,
-        systemOverlayStyle: SystemUiOverlayStyle.light,
+        backgroundColor: AppColors.surface,
+        foregroundColor: AppColors.textPrimary,
+        systemOverlayStyle: SystemUiOverlayStyle.dark,
         titleTextStyle: TextStyle(
-          color: Colors.white,
+          color: AppColors.textPrimary,
           fontSize: 20,
           fontWeight: FontWeight.w600,
         ),
-        iconTheme: IconThemeData(color: Colors.white),
+        iconTheme: IconThemeData(color: AppColors.textPrimary, size: 24),
       ),
       
       // Card Theme
@@ -47,7 +50,7 @@ class AppTheme {
         margin: const EdgeInsets.all(AppDimensions.marginSmall),
       ),
       
-      // Elevated Button Theme
+      // Elevated Button Theme (kept for non-gradient usages)
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
           backgroundColor: AppColors.primary,
@@ -55,22 +58,23 @@ class AppTheme {
           elevation: AppDimensions.elevationSmall,
           minimumSize: const Size(double.infinity, AppDimensions.buttonHeight),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AppDimensions.borderRadius),
+            borderRadius: BorderRadius.circular(AppDimensions.borderRadiusLarge),
           ),
           textStyle: AppTextStyles.button,
         ),
       ),
       
-      // Outlined Button Theme
+      // Outlined Button Theme (secondary)
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
           foregroundColor: AppColors.primary,
           minimumSize: const Size(double.infinity, AppDimensions.buttonHeight),
-          side: const BorderSide(color: AppColors.primary),
+          side: const BorderSide(color: AppColors.primary, width: 1),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AppDimensions.borderRadius),
+            borderRadius: BorderRadius.circular(AppDimensions.borderRadiusLarge),
           ),
           textStyle: AppTextStyles.button.copyWith(color: AppColors.primary),
+          backgroundColor: Colors.white,
         ),
       ),
       
@@ -115,20 +119,22 @@ class AppTheme {
         errorStyle: AppTextStyles.caption.copyWith(color: AppColors.error),
       ),
       
-      // Bottom Navigation Bar Theme
+      // Bottom Navigation Bar Theme (spec)
       bottomNavigationBarTheme: const BottomNavigationBarThemeData(
         backgroundColor: AppColors.surface,
         selectedItemColor: AppColors.primary,
         unselectedItemColor: AppColors.textSecondary,
         type: BottomNavigationBarType.fixed,
         elevation: AppDimensions.elevationMedium,
+        selectedLabelStyle: TextStyle(fontSize: 12),
+        unselectedLabelStyle: TextStyle(fontSize: 12),
       ),
       
-      // Floating Action Button Theme
+      // Floating Action Button Theme (default; SOS uses custom widget)
       floatingActionButtonTheme: const FloatingActionButtonThemeData(
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
-        elevation: AppDimensions.elevationMedium,
+        elevation: AppDimensions.elevationLarge,
       ),
       
       // Dialog Theme
@@ -180,15 +186,15 @@ class AppTheme {
         space: 1,
       ),
       
-      // Text Theme
-      textTheme: const TextTheme(
-        displayLarge: AppTextStyles.headline1,
-        displayMedium: AppTextStyles.headline2,
+      // Text Theme (spec sizes)
+      textTheme: TextTheme(
+        displayLarge: AppTextStyles.headline1.copyWith(fontSize: 34),
+        displayMedium: AppTextStyles.headline2.copyWith(fontSize: 28),
         displaySmall: AppTextStyles.headline3,
-        bodyLarge: AppTextStyles.bodyText1,
-        bodyMedium: AppTextStyles.bodyText2,
-        bodySmall: AppTextStyles.caption,
-        labelLarge: AppTextStyles.button,
+        bodyLarge: AppTextStyles.bodyText1.copyWith(fontSize: 16),
+        bodyMedium: AppTextStyles.bodyText2.copyWith(fontSize: 14),
+        bodySmall: AppTextStyles.caption.copyWith(fontSize: 12),
+        labelLarge: AppTextStyles.button.copyWith(fontSize: 16),
       ),
     );
   }

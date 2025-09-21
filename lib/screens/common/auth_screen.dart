@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'dart:async';
 import '../../core/constants.dart';
 import '../../core/routes.dart';
 import '../../core/utils/validators.dart';
+import '../../widgets/common/custom_button.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/user_provider.dart';
 import '../../core/services/local_storage.dart';
@@ -29,6 +31,9 @@ class _AuthScreenState extends State<AuthScreen>
   String? _phoneError;
   bool _showInlineOtp = false;
   final _otpCtrl = TextEditingController();
+  final _countryCodeCtrl = TextEditingController(text: '+91');
+  int _resendSeconds = 60;
+  Timer? _resendTimer;
 
   // Email
   final _emailFormKey = GlobalKey<FormState>();
@@ -48,6 +53,8 @@ class _AuthScreenState extends State<AuthScreen>
     _tabController.dispose();
     _phoneCtrl.dispose();
     _otpCtrl.dispose();
+    _countryCodeCtrl.dispose();
+    _resendTimer?.cancel();
     _emailCtrl.dispose();
     _passwordCtrl.dispose();
     super.dispose();
@@ -61,13 +68,41 @@ class _AuthScreenState extends State<AuthScreen>
     try {
       if (!_phoneFormKey.currentState!.validate()) return;
       final phone = _phoneCtrl.text.trim();
-      await context.read<AuthProvider>().sendOtp('+91$phone');
-      setState(() => _showInlineOtp = true);
+      final cc = _countryCodeCtrl.text.trim();
+      final full = '$cc$phone'.replaceAll(' ', '');
+      final ok = await context.read<AuthProvider>().sendOtp(full);
+      if (!mounted) return;
+      if (ok) {
+        setState(() {
+          _showInlineOtp = true;
+          _startResendCountdown();
+        });
+      } else {
+        setState(() => _phoneError = context.read<AuthProvider>().lastError ?? 'Failed to send OTP');
+      }
     } catch (e) {
       setState(() => _phoneError = e.toString());
     } finally {
       setState(() => _phoneLoading = false);
     }
+  }
+
+  void _startResendCountdown() {
+    _resendTimer?.cancel();
+    setState(() => _resendSeconds = 60);
+    _resendTimer = Timer.periodic(const Duration(seconds: 1), (t) {
+      if (!mounted) return;
+      if (_resendSeconds == 0) {
+        t.cancel();
+      } else {
+        setState(() => _resendSeconds--);
+      }
+    });
+  }
+
+  Future<void> _resendOtp() async {
+    if (_resendSeconds > 0) return;
+    await _sendOtp();
   }
 
   Future<void> _verifyOtp() async {
@@ -79,16 +114,23 @@ class _AuthScreenState extends State<AuthScreen>
       final otp = _otpCtrl.text.trim();
       await context.read<AuthProvider>().verifyOtp(otp);
       if (!mounted) return;
-      
-      // Load user profile to check onboarding status
-      await context.read<UserProvider>().loadCachedUser();
-      final hasCompletedOnboarding = context.read<UserProvider>().hasCompletedOnboarding;
-      
+
+      // After successful login, enforce startup flow: Language -> Role -> Dashboard
+      if (LocalStorageService.isFirstTimeLaunch()) {
+        AppRoutes.navigateToLanguage(context);
+        return;
+      }
+
+      // If language already set but role not selected, go to role select
       final role = LocalStorageService.getSetting('user_role');
+      if (role == null) {
+        AppRoutes.navigateToRoleSelect(context);
+        return;
+      }
+
+      // Otherwise go directly to respective dashboard
       if (role == 'asha') {
         AppRoutes.navigateToAshaDashboard(context);
-      } else if (!hasCompletedOnboarding) {
-        AppRoutes.navigateToProfileSetup(context);
       } else {
         AppRoutes.navigateToUserDashboard(context);
       }
@@ -113,15 +155,20 @@ class _AuthScreenState extends State<AuthScreen>
           .signInWithEmailAndPassword(email: email, password: password);
       if (!mounted) return;
       
-      // Load user profile to check onboarding status
-      await context.read<UserProvider>().loadCachedUser();
-      final hasCompletedOnboarding = context.read<UserProvider>().hasCompletedOnboarding;
-      
+      // After successful login, enforce startup flow: Language -> Role -> Dashboard
+      if (LocalStorageService.isFirstTimeLaunch()) {
+        AppRoutes.navigateToLanguage(context);
+        return;
+      }
+
       final role = LocalStorageService.getSetting('user_role');
+      if (role == null) {
+        AppRoutes.navigateToRoleSelect(context);
+        return;
+      }
+
       if (role == 'asha') {
         AppRoutes.navigateToAshaDashboard(context);
-      } else if (!hasCompletedOnboarding) {
-        AppRoutes.navigateToProfileSetup(context);
       } else {
         AppRoutes.navigateToUserDashboard(context);
       }
@@ -134,20 +181,19 @@ class _AuthScreenState extends State<AuthScreen>
 
   @override
   Widget build(BuildContext context) {
-    // final l10n = context.l10n; // TODO
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Login / Register'), // TODO: l10n.authTitle
+        title: const Text('Verify Phone'),
         bottom: TabBar(
           controller: _tabController,
           tabs: const [
-            Tab(text: 'Phone'), // TODO: l10n.authPhone
-            Tab(text: 'Email'), // TODO: l10n.authEmail
+            Tab(text: 'Phone'),
+            Tab(text: 'Email'),
           ],
         ),
         actions: [
           IconButton(
-            tooltip: 'Change language', // TODO
+            tooltip: 'Change language',
             onPressed: () => AppRoutes.navigateToLanguage(context),
             icon: const Icon(Icons.language),
           ),
@@ -165,10 +211,9 @@ class _AuthScreenState extends State<AuthScreen>
           padding: const EdgeInsets.all(12.0),
           child: TextButton(
             onPressed: () {
-              // TODO: Allow guest mode? If yes, set a guest flag in AuthProvider
               AppRoutes.navigateToUserDashboard(context);
             },
-            child: const Text('Continue as guest'), // TODO: l10n.continueGuest
+            child: const Text('Continue as guest'),
           ),
         ),
       ),
@@ -181,52 +226,75 @@ class _AuthScreenState extends State<AuthScreen>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          const Text('Enter your mobile number', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600)),
+          const SizedBox(height: 8),
+          const Text('We will send you a 6-digit verification code', style: TextStyle(color: Colors.black54)),
+          const SizedBox(height: 16),
           Form(
             key: _phoneFormKey,
-            child: TextFormField(
-              controller: _phoneCtrl,
-              keyboardType: TextInputType.phone,
-              decoration: const InputDecoration(
-                labelText: 'Phone number', // TODO
-                prefixText: '+91 ', // TODO: country selector
-                hintText: '10-digit number',
-              ),
-              validator: Validators.validatePhoneNumber,
+            child: Row(
+              children: [
+                SizedBox(
+                  width: 88,
+                  child: TextFormField(
+                    controller: _countryCodeCtrl,
+                    keyboardType: TextInputType.phone,
+                    decoration: const InputDecoration(labelText: 'Code'),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: TextFormField(
+                    controller: _phoneCtrl,
+                    keyboardType: TextInputType.phone,
+                    decoration: const InputDecoration(
+                      labelText: 'Phone number',
+                      hintText: '10-digit number',
+                    ),
+                    validator: Validators.validatePhoneNumber,
+                  ),
+                ),
+              ],
             ),
           ),
-          const SizedBox(height: 12),
-          if (_phoneError != null)
+          if (_phoneError != null) ...[
+            const SizedBox(height: 8),
             Text(_phoneError!, style: const TextStyle(color: Colors.red)),
-          const SizedBox(height: 12),
-          ElevatedButton(
-            onPressed: _phoneLoading ? null : _sendOtp,
-            child: _phoneLoading
-                ? const SizedBox(
-                    height: 20,
-                    width: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Text('Send OTP'), // TODO
+          ],
+          const SizedBox(height: 16),
+          CustomButton(
+            label: _showInlineOtp ? (_resendSeconds > 0 ? 'Send OTP' : 'Resend OTP') : 'Send OTP',
+            onPressed: _phoneLoading
+                ? null
+                : () {
+                    if (_showInlineOtp && _resendSeconds == 0) {
+                      _resendOtp();
+                    } else if (!_showInlineOtp) {
+                      _sendOtp();
+                    }
+                  },
           ),
           if (_showInlineOtp) ...[
-            const SizedBox(height: 16),
-            TextFormField(
-              controller: _otpCtrl,
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(
-                labelText: 'Enter OTP', // TODO
-              ),
+            const SizedBox(height: 20),
+            const Text('Enter the 6-digit code', style: TextStyle(fontWeight: FontWeight.w600)),
+            const SizedBox(height: 8),
+            _OtpSixBox(controller: _otpCtrl),
+            const SizedBox(height: 8),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(_resendSeconds > 0 ? 'Resend in 00:${_resendSeconds.toString().padLeft(2, '0')}' : 'You can resend now',
+                    style: const TextStyle(color: Colors.black54)),
+                TextButton(
+                  onPressed: _resendSeconds == 0 && !_phoneLoading ? _resendOtp : null,
+                  child: const Text('Resend OTP'),
+                ),
+              ],
             ),
             const SizedBox(height: 12),
-            ElevatedButton(
+            CustomButton(
+              label: 'Verify & Continue',
               onPressed: _phoneLoading ? null : _verifyOtp,
-              child: _phoneLoading
-                  ? const SizedBox(
-                      height: 20,
-                      width: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Text('Verify & Continue'),
             ),
           ],
         ],
@@ -285,6 +353,73 @@ class _AuthScreenState extends State<AuthScreen>
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _OtpSixBox extends StatefulWidget {
+  final TextEditingController controller;
+  const _OtpSixBox({required this.controller});
+
+  @override
+  State<_OtpSixBox> createState() => _OtpSixBoxState();
+}
+
+class _OtpSixBoxState extends State<_OtpSixBox> {
+  final FocusNode _focusNode = FocusNode();
+
+  @override
+  void initState() {
+    super.initState();
+    widget.controller.addListener(() => setState(() {}));
+  }
+
+  @override
+  void dispose() {
+    _focusNode.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final text = widget.controller.text;
+    final digits = text.padRight(6, ' ');
+    return GestureDetector(
+      onTap: () => FocusScope.of(context).requestFocus(_focusNode),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: List.generate(6, (i) {
+              final char = digits[i];
+              return Container(
+                width: 48,
+                height: 56,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: const Color(0xFFE0E0E0)),
+                ),
+                child: Text(
+                  char.trim(),
+                  style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w600),
+                ),
+              );
+            }),
+          ),
+          TextField(
+            controller: widget.controller,
+            focusNode: _focusNode,
+            maxLength: 6,
+            keyboardType: TextInputType.number,
+            decoration: const InputDecoration(counterText: '', border: InputBorder.none, isCollapsed: true),
+            style: const TextStyle(color: Colors.transparent, height: 0.01),
+            cursorColor: Colors.transparent,
+          ),
+        ],
       ),
     );
   }

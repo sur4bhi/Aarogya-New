@@ -35,35 +35,46 @@ class AppConstants {
 
 // App Colors
 class AppColors {
-  static const Color primary = Color(0xFF2E7D32);
-  static const Color primaryLight = Color(0xFF60AD5E);
-  static const Color primaryDark = Color(0xFF005005);
-  
-  static const Color secondary = Color(0xFF1976D2);
-  static const Color secondaryLight = Color(0xFF63A4FF);
-  static const Color secondaryDark = Color(0xFF004BA0);
-  
+  // Brand & Accents (Lavender gradient)
+  static const Color primary = Color(0xFF7C4DFF); // accent_start
+  static const Color primaryAlt = Color(0xFFA58CFF); // accent_end
+  static const Color secondary = Color(0xFF7C4DFF);
+  static const Color secondaryLight = Color(0xFFA58CFF);
+  static const Color secondaryDark = Color(0xFF5B2EFF);
+
+  // Status
   static const Color success = Color(0xFF4CAF50);
-  static const Color warning = Color(0xFFFF9800);
-  static const Color error = Color(0xFFF44336);
+  static const Color warning = Color(0xFFFFC107);
+  static const Color error = Color(0xFFFF0000); // emergency
   static const Color info = Color(0xFF2196F3);
-  
-  static const Color background = Color(0xFFF5F5F5);
+
+  // Surfaces
+  static const Color background = Color(0xFFF7F5FF);
   static const Color surface = Color(0xFFFFFFFF);
-  static const Color onSurface = Color(0xFF212121);
-  static const Color onBackground = Color(0xFF212121);
-  
-  static const Color textPrimary = Color(0xFF212121);
+  static const Color onSurface = Color(0xFF000000);
+  static const Color onBackground = Color(0xFF000000);
+
+  // Text
+  static const Color textPrimary = Color(0xFF000000);
   static const Color textSecondary = Color(0xFF757575);
   static const Color textHint = Color(0xFFBDBDBD);
-  
+
+  // Lines
   static const Color divider = Color(0xFFE0E0E0);
   static const Color border = Color(0xFFE0E0E0);
-  
+
   // Health Status Colors
   static const Color healthGood = Color(0xFF4CAF50);
-  static const Color healthWarning = Color(0xFFFF9800);
-  static const Color healthCritical = Color(0xFFF44336);
+  static const Color healthWarning = Color(0xFFFFC107);
+  static const Color healthCritical = Color(0xFFFF0000);
+}
+
+class AppGradients {
+  static const LinearGradient primary = LinearGradient(
+    colors: [AppColors.primary, AppColors.primaryAlt],
+    begin: Alignment.centerLeft,
+    end: Alignment.centerRight,
+  );
 }
 
 // App Strings
@@ -136,10 +147,13 @@ class AppDimensions {
   static const double marginLarge = 24.0;
   static const double marginXLarge = 32.0;
   
-  static const double borderRadius = 8.0;
-  static const double borderRadiusLarge = 16.0;
+  // Corner radius spec
+  static const double borderRadius = 12.0; // small
+  static const double borderRadiusLarge = 16.0; // medium
   static const double borderRadiusXLarge = 24.0;
   
+  // Elevation spec
+  static const double elevationNone = 0.0;
   static const double elevationSmall = 2.0;
   static const double elevationMedium = 4.0;
   static const double elevationLarge = 8.0;
