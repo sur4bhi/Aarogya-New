@@ -40,11 +40,32 @@ class _UserDashboardScreenState extends State<UserDashboardScreen> with WidgetsB
   }
 
   Widget _sosFab(BuildContext context) {
-    return FloatingActionButton.extended(
-      onPressed: () => _triggerSos(context),
-      backgroundColor: Colors.red,
-      icon: const Icon(Icons.warning_amber_rounded, color: Colors.white),
-      label: const Text('SOS', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+    return GestureDetector(
+      onLongPress: () async {
+        final confirmed = await showDialog<bool>(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: const Text('Emergency?'),
+            content: const Text('Are you experiencing an emergency? Confirm to notify.'),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+              FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Confirm')),
+            ],
+          ),
+        );
+        if (confirmed == true) {
+          await _triggerSos(context);
+        }
+      },
+      child: const SizedBox(
+        width: 64,
+        height: 64,
+        child: FloatingActionButton(
+          onPressed: null,
+          backgroundColor: Colors.red,
+          child: Icon(Icons.sos, color: Colors.white, size: 28),
+        ),
+      ),
     );
   }
 
@@ -216,9 +237,14 @@ class _UserDashboardScreenState extends State<UserDashboardScreen> with WidgetsB
     final l10n = AppLocalizations.of(context)!;
     final greeting = l10n.hello;
 
+    // On first build or resume, check nudge
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<VitalsProvider>().checkMissedDaysNudge();
+    });
+
     return Scaffold(
       appBar: AppBar(
-        title: Text('$greeting, User'), // TODO: Use user name & l10n
+        title: const Text("Good Morning! Let's quickly log today's vitals."),
         actions: [
           IconButton(
             tooltip: l10n.language,
@@ -279,7 +305,20 @@ class _UserDashboardScreenState extends State<UserDashboardScreen> with WidgetsB
           ),
         ],
       ),
-      floatingActionButton: _sosFab(context),
+      floatingActionButton: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          FloatingActionButton(
+            heroTag: 'ai_fab',
+            backgroundColor: AppColors.primary,
+            onPressed: () => AppRoutes.navigateToAiCoach(context),
+            child: const Icon(Icons.chat_bubble_outline, color: Colors.white),
+          ),
+          const SizedBox(height: 12),
+          _sosFab(context),
+        ],
+      ),
     );
   }
 
@@ -506,13 +545,15 @@ class _UserDashboardScreenState extends State<UserDashboardScreen> with WidgetsB
             ),
           ],
         ),
-        const HealthArticleCard(
-          title: '5 tips for healthy heart',
-          summary: 'Simple lifestyle habits can significantly improve your heart health.',
-        ),
-        const HealthArticleCard(
-          title: 'Understanding blood pressure',
-          summary: 'Know your numbers and why they matter.',
+        // Tip: Explore Health Feed for personalized content
+        Card(
+          elevation: 0,
+          color: Colors.blueGrey.withOpacity(0.06),
+          child: const ListTile(
+            leading: Icon(Icons.lightbulb_outline),
+            title: Text('Explore Health Feed for personalized tips'),
+            subtitle: Text('Diet, exercise and wellness content in your language'),
+          ),
         ),
       ],
     );

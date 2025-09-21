@@ -232,4 +232,30 @@ class VitalsProvider extends ChangeNotifier {
       rethrow;
     }
   }
+
+  // Check if user missed logging vitals for 3 consecutive days and nudge.
+  Future<void> checkMissedDaysNudge() async {
+    try {
+      if (_vitalsHistory.isEmpty) {
+        // If no history at all, nudge
+        await NotificationService.showNotification(
+          id: DateTime.now().millisecondsSinceEpoch ~/ 1000,
+          title: 'Quick health check',
+          body: "Let's log today's vitals to stay on track.",
+          priority: NotificationPriority.high,
+        );
+        return;
+      }
+      final last = _vitalsHistory.first.timestamp;
+      final days = DateTime.now().difference(last).inDays;
+      if (days >= 3) {
+        await NotificationService.showNotification(
+          id: DateTime.now().millisecondsSinceEpoch ~/ 1000,
+          title: 'We miss you! 💜',
+          body: "It's been a few days—log your vitals when you can.",
+          priority: NotificationPriority.high,
+        );
+      }
+    } catch (_) {}
+  }
 }

@@ -277,6 +277,20 @@ class _VitalsInputScreenState extends State<VitalsInputScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Record Vitals')),
+      bottomNavigationBar: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: _saving ? null : _save,
+              child: _saving
+                  ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                  : const Text('Save & Close'),
+            ),
+          ),
+        ),
+      ),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(16),
@@ -286,6 +300,8 @@ class _VitalsInputScreenState extends State<VitalsInputScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
+                  const Text("Good Morning! Let's quickly log today's vitals.", style: TextStyle(fontSize: 16)),
+                  const SizedBox(height: 12),
                   _sectionTitle('Blood Pressure (mmHg)'),
                   Align(
                     alignment: Alignment.centerLeft,
@@ -300,6 +316,7 @@ class _VitalsInputScreenState extends State<VitalsInputScreen> {
                       Expanded(
                         child: TextFormField(
                           controller: _sysCtrl,
+                          autofocus: true,
                           decoration: InputDecoration(
                             labelText: 'Systolic',
                             suffixIcon: IconButton(
@@ -308,7 +325,7 @@ class _VitalsInputScreenState extends State<VitalsInputScreen> {
                               onPressed: () => _voiceFill(_sysCtrl),
                             ),
                           ),
-                          keyboardType: TextInputType.number,
+                          keyboardType: const TextInputType.numberWithOptions(decimal: false, signed: false),
                           validator: _validateSystolic,
                         ),
                       ),
@@ -324,7 +341,7 @@ class _VitalsInputScreenState extends State<VitalsInputScreen> {
                               onPressed: () => _voiceFill(_diaCtrl),
                             ),
                           ),
-                          keyboardType: TextInputType.number,
+                          keyboardType: const TextInputType.numberWithOptions(decimal: false, signed: false),
                           validator: _validateDiastolic,
                         ),
                       ),
@@ -354,7 +371,7 @@ class _VitalsInputScreenState extends State<VitalsInputScreen> {
                               onPressed: () => _voiceFill(_glucoseCtrl),
                             ),
                           ),
-                          keyboardType: TextInputType.number,
+                          keyboardType: const TextInputType.numberWithOptions(decimal: false, signed: false),
                           validator: _validateGlucose,
                         ),
                       ),
@@ -389,7 +406,7 @@ class _VitalsInputScreenState extends State<VitalsInputScreen> {
                               onPressed: () => _voiceFill(_weightCtrl),
                             ),
                           ),
-                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                          keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: false),
                           validator: _validateWeight,
                         ),
                       ),
@@ -434,13 +451,6 @@ class _VitalsInputScreenState extends State<VitalsInputScreen> {
                       padding: const EdgeInsets.only(bottom: 8.0),
                       child: Text(_error!, style: const TextStyle(color: Colors.red)),
                     ),
-
-                  ElevatedButton(
-                    onPressed: _saving ? null : _save,
-                    child: _saving
-                        ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2))
-                        : const Text('Save Vitals'),
-                  ),
                 ],
               ),
             ),

@@ -257,6 +257,24 @@ class VitalsModel {
     );
   }
 
+  String get summaryString {
+    final time = '${timestamp.hour.toString().padLeft(2, '0')}:${timestamp.minute.toString().padLeft(2, '0')}';
+    switch (type) {
+      case VitalType.bloodPressure:
+        return 'BP ${bloodPressureString} mmHg • $time${notes != null ? ' • ${notes!}' : ''}';
+      case VitalType.bloodGlucose:
+        return 'Glucose ${bloodGlucose?.toStringAsFixed(0) ?? '--'} mg/dL (${(glucoseType ?? 'random')}) • $time${notes != null ? ' • ${notes!}' : ''}';
+      case VitalType.weight:
+        return 'Weight ${weight?.toStringAsFixed(1) ?? '--'} kg • $time${notes != null ? ' • ${notes!}' : ''}';
+      case VitalType.heartRate:
+        return 'HR ${heartRate?.toStringAsFixed(0) ?? '--'} bpm • $time${notes != null ? ' • ${notes!}' : ''}';
+      case VitalType.temperature:
+        return 'Temp ${temperature?.toStringAsFixed(1) ?? '--'} °F • $time${notes != null ? ' • ${notes!}' : ''}';
+      default:
+        return '${type.displayName} • $time${notes != null ? ' • ${notes!}' : ''}';
+    }
+  }
+
   @override
   String toString() {
     return 'VitalsModel(id: $id, type: $type, timestamp: $timestamp)';

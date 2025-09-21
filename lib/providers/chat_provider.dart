@@ -1,22 +1,22 @@
 import 'package:flutter/foundation.dart';
 import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../models/chat_model.dart';
-import '../models/chat_message_model.dart';
+import '../models/chat_model.dart' as chatm;
+import '../models/chat_message_model.dart' as chatmsg;
 import '../core/services/local_storage.dart';
 
 class ChatProvider extends ChangeNotifier {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   
   // Chat conversations
-  List<ChatModel> _conversations = [];
-  ChatModel? _currentConversation;
+  List<chatm.ChatModel> _conversations = [];
+  chatm.ChatModel? _currentConversation;
   
   // Messages for current conversation
-  List<ChatMessageModel> _messages = [];
+  List<chatmsg.ChatMessageModel> _messages = [];
   
   // Typing indicators
-  Map<String, List<TypingIndicator>> _typingIndicators = {};
+  Map<String, List<chatmsg.TypingIndicator>> _typingIndicators = {};
   
   // Real-time listeners
   StreamSubscription<QuerySnapshot>? _conversationsListener;
@@ -31,10 +31,10 @@ class ChatProvider extends ChangeNotifier {
   String? _currentUserRole;
   
   // Getters
-  List<ChatModel> get conversations => List.unmodifiable(_conversations);
-  ChatModel? get currentConversation => _currentConversation;
-  List<ChatMessageModel> get messages => List.unmodifiable(_messages);
-  Map<String, List<TypingIndicator>> get typingIndicators => Map.unmodifiable(_typingIndicators);
+  List<chatm.ChatModel> get conversations => List.unmodifiable(_conversations);
+  chatm.ChatModel? get currentConversation => _currentConversation;
+  List<chatmsg.ChatMessageModel> get messages => List.unmodifiable(_messages);
+  Map<String, List<chatmsg.TypingIndicator>> get typingIndicators => Map.unmodifiable(_typingIndicators);
   bool get isLoading => _isLoading;
   String? get error => _error;
   
@@ -60,9 +60,9 @@ class ChatProvider extends ChangeNotifier {
       // Check if conversation already exists
       final existingConversation = _conversations.firstWhere(
         (conv) => conv.participants.contains(ashaId) && conv.participants.contains(_currentUserId),
-        orElse: () => ChatModel(
+        orElse: () => chatm.ChatModel(
           id: '',
-          participants: [],
+          participants: const [],
           createdAt: DateTime.now(),
           updatedAt: DateTime.now(),
         ),
@@ -87,7 +87,7 @@ class ChatProvider extends ChangeNotifier {
         'participantImages': {
           if (ashaImageUrl != null) ashaId: ashaImageUrl,
         },
-        'type': ChatType.individual.toString(),
+        'type': chatm.ChatType.individual.toString(),
         'isActive': true,
         'createdAt': Timestamp.fromDate(now),
         'updatedAt': Timestamp.fromDate(now),
@@ -129,7 +129,7 @@ class ChatProvider extends ChangeNotifier {
           .orderBy('updatedAt', descending: true)
           .get();
       
-      _conversations = snapshot.docs.map((doc) => ChatModel.fromFirestore(doc)).toList();
+      _conversations = snapshot.docs.map((doc) => chatm.ChatModel.fromFirestore(doc)).toList();
       notifyListeners();
       
     } catch (e) {
@@ -151,7 +151,7 @@ class ChatProvider extends ChangeNotifier {
         .snapshots()
         .listen(
       (snapshot) {
-        _conversations = snapshot.docs.map((doc) => ChatModel.fromFirestore(doc)).toList();
+        _conversations = snapshot.docs.map((doc) => chatm.ChatModel.fromFirestore(doc)).toList();
         notifyListeners();
       },
       onError: (error) {
@@ -194,7 +194,7 @@ class ChatProvider extends ChangeNotifier {
           .get();
       
       _messages = snapshot.docs
-          .map((doc) => ChatMessageModel.fromFirestore(doc))
+          .map((doc) => chatmsg.ChatMessageModel.fromFirestore(doc))
           .toList()
           .reversed
           .toList();
@@ -216,9 +216,9 @@ class ChatProvider extends ChangeNotifier {
         .snapshots()
         .listen(
       (snapshot) {
-        final newMessages = <ChatMessageModel>[];
+        final newMessages = <chatmsg.ChatMessageModel>[];
         for (final docChange in snapshot.docChanges) {
-          final message = ChatMessageModel.fromFirestore(docChange.doc);
+          final message = chatmsg.ChatMessageModel.fromFirestore(docChange.doc);
           
           switch (docChange.type) {
             case DocumentChangeType.added:
@@ -263,11 +263,11 @@ class ChatProvider extends ChangeNotifier {
         'senderId': _currentUserId!,
         'senderName': _currentUserName,
         'senderRole': _currentUserRole,
-        'type': MessageType.text.toString(),
+        'type': chatmsg.MessageType.text.toString(),
         'content': content,
         'timestamp': Timestamp.fromDate(now),
         'readBy': [_currentUserId!],
-        'status': MessageStatus.sent.toString(),
+'status': chatmsg.MessageStatus.sent.toString(),
         'isEdited': false,
         'isDeleted': false,
         if (replyToMessageId != null) 'replyToMessageId': replyToMessageId,
@@ -305,12 +305,12 @@ class ChatProvider extends ChangeNotifier {
         'senderId': _currentUserId!,
         'senderName': _currentUserName,
         'senderRole': _currentUserRole,
-        'type': MessageType.image.toString(),
+'type': chatmsg.MessageType.image.toString(),
         'content': caption ?? '',
         'imageUrl': imageUrl,
         'timestamp': Timestamp.fromDate(now),
         'readBy': [_currentUserId!],
-        'status': MessageStatus.sent.toString(),
+'status': chatmsg.MessageStatus.sent.toString(),
         'isEdited': false,
         'isDeleted': false,
       };
@@ -343,11 +343,11 @@ class ChatProvider extends ChangeNotifier {
         'senderId': 'system',
         'senderName': 'System',
         'senderRole': 'system',
-        'type': MessageType.system.toString(),
+'type': chatmsg.MessageType.system.toString(),
         'content': content,
         'timestamp': Timestamp.fromDate(DateTime.now()),
         'readBy': [],
-        'status': MessageStatus.sent.toString(),
+'status': chatmsg.MessageStatus.sent.toString(),
         'isEdited': false,
         'isDeleted': false,
       };
@@ -467,7 +467,7 @@ class ChatProvider extends ChangeNotifier {
         .listen(
       (snapshot) {
         final indicators = snapshot.docs
-            .map((doc) => TypingIndicator.fromFirestore(doc))
+            .map((doc) => chatmsg.TypingIndicator.fromFirestore(doc))
             .where((indicator) => 
                 indicator.userId != _currentUserId && 
                 !indicator.isExpired)
@@ -535,7 +535,7 @@ class ChatProvider extends ChangeNotifier {
   int getUnreadCount(String conversationId) {
     final conversation = _conversations.firstWhere(
       (conv) => conv.id == conversationId,
-      orElse: () => ChatModel(
+      orElse: () => chatm.ChatModel(
         id: '',
         participants: [],
         createdAt: DateTime.now(),
@@ -563,7 +563,7 @@ class ChatProvider extends ChangeNotifier {
           .get();
       
       final olderMessages = snapshot.docs
-          .map((doc) => ChatMessageModel.fromFirestore(doc))
+          .map((doc) => chatmsg.ChatMessageModel.fromFirestore(doc))
           .toList()
           .reversed
           .toList();

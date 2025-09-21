@@ -84,7 +84,7 @@ dependencies:
   # Deeplinks (for SOS via SMS intent)
   url_launcher: ^6.3.0
   uuid: ^4.5.1
-
+  cached_network_image: ^3.3.1
 
 dev_dependencies:
   flutter_test:

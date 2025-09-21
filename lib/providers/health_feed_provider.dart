@@ -264,7 +264,7 @@ class HealthFeedProvider extends ChangeNotifier {
   }
   
   Future<void> _saveBookmarks() async {
-    await LocalStorageService.saveStringList('health_bookmarks', _bookmarkedIds.toList());
+    await LocalStorageService.setStringList('health_bookmarks', _bookmarkedIds.toList());
   }
   
   void _loadUserPreferences() {

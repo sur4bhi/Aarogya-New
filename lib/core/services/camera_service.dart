@@ -6,6 +6,17 @@ import 'package:image_picker/image_picker.dart';
 class CameraService {
   static final ImagePicker _picker = ImagePicker();
 
+  // Simple stubs that return local file paths as URLs for chat image messages
+  static Future<String?> captureAndUploadImage() async {
+    final x = await _picker.pickImage(source: ImageSource.camera, imageQuality: 85);
+    return x?.path; // In production, upload and return remote URL
+  }
+
+  static Future<String?> pickAndUploadImage() async {
+    final x = await _picker.pickImage(source: ImageSource.gallery, imageQuality: 85);
+    return x?.path;
+  }
+
   static Future<List<String>> captureMultiplePages({
     required BuildContext context,
     int maxPages = 5,

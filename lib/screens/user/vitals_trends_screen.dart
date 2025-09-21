@@ -134,6 +134,17 @@ class _VitalsTrendsScreenState extends State<VitalsTrendsScreen> {
       final dia = _optimizeSpots(_getBPDiastolicData(filtered));
       return LineChart(
         LineChartData(
+          lineTouchData: LineTouchData(
+            handleBuiltInTouches: true,
+            touchCallback: (event, response) {
+              if (!event.isInterestedForInteractions) return;
+final spots = response?.lineBarSpots;
+              if (spots == null || spots.isEmpty) return;
+              final spot = spots.first;
+              if (spot == null) return;
+              _showDayDetail(DateTime.fromMillisecondsSinceEpoch(spot.x.toInt()));
+            },
+          ),
           minX: _daysAgoTs(_selectedDays).toDouble(),
           maxX: DateTime.now().millisecondsSinceEpoch.toDouble(),
           lineBarsData: [
@@ -155,6 +166,17 @@ class _VitalsTrendsScreenState extends State<VitalsTrendsScreen> {
       final glucose = _optimizeSpots(_getGlucoseData(filtered));
       return LineChart(
         LineChartData(
+          lineTouchData: LineTouchData(
+            handleBuiltInTouches: true,
+            touchCallback: (event, response) {
+              if (!event.isInterestedForInteractions) return;
+final spots = response?.lineBarSpots;
+              if (spots == null || spots.isEmpty) return;
+              final spot = spots.first;
+              if (spot == null) return;
+              _showDayDetail(DateTime.fromMillisecondsSinceEpoch(spot.x.toInt()));
+            },
+          ),
           minX: _daysAgoTs(_selectedDays).toDouble(),
           maxX: DateTime.now().millisecondsSinceEpoch.toDouble(),
           lineBarsData: [
@@ -175,6 +197,17 @@ class _VitalsTrendsScreenState extends State<VitalsTrendsScreen> {
       final hr = _optimizeSpots(_getHeartRateData(filtered));
       return LineChart(
         LineChartData(
+          lineTouchData: LineTouchData(
+            handleBuiltInTouches: true,
+            touchCallback: (event, response) {
+              if (!event.isInterestedForInteractions) return;
+final spots = response?.lineBarSpots;
+              if (spots == null || spots.isEmpty) return;
+              final spot = spots.first;
+              if (spot == null) return;
+              _showDayDetail(DateTime.fromMillisecondsSinceEpoch(spot.x.toInt()));
+            },
+          ),
           minX: _daysAgoTs(_selectedDays).toDouble(),
           maxX: DateTime.now().millisecondsSinceEpoch.toDouble(),
           lineBarsData: [
@@ -195,6 +228,17 @@ class _VitalsTrendsScreenState extends State<VitalsTrendsScreen> {
     final weight = _optimizeSpots(_getWeightData(filtered));
     return LineChart(
       LineChartData(
+        lineTouchData: LineTouchData(
+          handleBuiltInTouches: true,
+          touchCallback: (event, response) {
+            if (!event.isInterestedForInteractions) return;
+final spots = response?.lineBarSpots;
+            if (spots == null || spots.isEmpty) return;
+            final spot = spots.first;
+            if (spot == null) return;
+            _showDayDetail(DateTime.fromMillisecondsSinceEpoch(spot.x.toInt()));
+          },
+        ),
         minX: _daysAgoTs(_selectedDays).toDouble(),
         maxX: DateTime.now().millisecondsSinceEpoch.toDouble(),
         lineBarsData: [
@@ -237,6 +281,35 @@ class _VitalsTrendsScreenState extends State<VitalsTrendsScreen> {
             Text('Trend: $trend'),
           ],
         ),
+      ),
+    );
+  }
+
+  void _showDayDetail(DateTime day) {
+    final provider = context.read<VitalsProvider>();
+    final start = DateTime(day.year, day.month, day.day);
+    final end = start.add(const Duration(days: 1)).subtract(const Duration(milliseconds: 1));
+    final items = provider.getVitalsInRange(start, end);
+    showModalBottomSheet(
+      context: context,
+      showDragHandle: true,
+      builder: (ctx) => Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: items.isEmpty
+            ? const Text('No data logged on this day')
+            : Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Details for ${start.toLocal().toString().split(" ").first}',
+                      style: const TextStyle(fontWeight: FontWeight.w600)),
+                  const SizedBox(height: 8),
+                  ...items.map((v) => Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 6.0),
+                        child: Text(v.summaryString),
+                      )),
+                ],
+              ),
       ),
     );
   }

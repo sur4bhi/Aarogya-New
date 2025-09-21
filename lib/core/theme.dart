@@ -206,10 +206,10 @@ class AppTheme {
       
       // Color Scheme
       colorScheme: const ColorScheme.dark(
-        primary: AppColors.primaryLight,
-        onPrimary: Colors.black,
-        secondary: AppColors.secondaryLight,
-        onSecondary: Colors.black,
+        primary: AppColors.primary,
+        onPrimary: Colors.white,
+        secondary: AppColors.secondary,
+        onSecondary: Colors.white,
         surface: Color(0xFF121212),
         onSurface: Colors.white,
         background: Color(0xFF000000),
