@@ -3,6 +3,7 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:provider/provider.dart';
 import '../../providers/vitals_provider.dart';
 import '../../models/vitals_model.dart';
+import '../../l10n/app_localizations.dart';
 
 class VitalsTrendsScreen extends StatefulWidget {
   const VitalsTrendsScreen({super.key});
@@ -13,7 +14,7 @@ class VitalsTrendsScreen extends StatefulWidget {
 
 class _VitalsTrendsScreenState extends State<VitalsTrendsScreen> {
   int _selectedDays = 30; // 7, 30, 90
-  String _selectedType = 'bloodPressure'; // bloodPressure, glucose, weight
+  String _selectedType = 'bloodPressure'; // bloodPressure, glucose, weight, heartRate
 
   @override
   Widget build(BuildContext context) {
@@ -102,10 +103,12 @@ class _VitalsTrendsScreenState extends State<VitalsTrendsScreen> {
   }
 
   Widget _buildVitalTypeSelector() {
-    final types = const [
-      {'key': 'bloodPressure', 'label': 'Blood Pressure'},
-      {'key': 'glucose', 'label': 'Blood Sugar'},
-      {'key': 'weight', 'label': 'Weight'},
+    final l10n = Localizations.maybeLocaleOf(context) != null ? AppLocalizations.of(context) : null;
+    final types = [
+      {'key': 'bloodPressure', 'label': l10n?.bloodPressure ?? 'Blood Pressure'},
+      {'key': 'glucose', 'label': l10n?.bloodSugar ?? 'Blood Sugar'},
+      {'key': 'weight', 'label': l10n?.weight ?? 'Weight'},
+      {'key': 'heartRate', 'label': l10n?.heartRate ?? 'Heart Rate'},
     ];
     return Wrap(
       spacing: 8,
@@ -168,6 +171,26 @@ class _VitalsTrendsScreenState extends State<VitalsTrendsScreen> {
       );
     }
 
+    if (_selectedType == 'heartRate') {
+      final hr = _optimizeSpots(_getHeartRateData(filtered));
+      return LineChart(
+        LineChartData(
+          minX: _daysAgoTs(_selectedDays).toDouble(),
+          maxX: DateTime.now().millisecondsSinceEpoch.toDouble(),
+          lineBarsData: [
+            LineChartBarData(spots: hr, color: Colors.purple, isCurved: false, dotData: const FlDotData(show: false)),
+          ],
+          gridData: const FlGridData(show: true),
+          titlesData: const FlTitlesData(
+            leftTitles: AxisTitles(sideTitles: SideTitles(showTitles: true, interval: 10)),
+            rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+            topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+            bottomTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+          ),
+        ),
+      );
+    }
+
     // weight
     final weight = _optimizeSpots(_getWeightData(filtered));
     return LineChart(
@@ -197,14 +220,24 @@ class _VitalsTrendsScreenState extends State<VitalsTrendsScreen> {
     final stats = _calculateStatistics(filtered);
     final trend = _getTrendDirection(filtered);
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text('Average: ${stats['avg']?.toStringAsFixed(1) ?? '--'}'),
-        Text('Highest: ${stats['max']?.toStringAsFixed(0) ?? '--'}'),
-        Text('Lowest: ${stats['min']?.toStringAsFixed(0) ?? '--'}'),
-        Text('Trend: $trend'),
-      ],
+    // Results card styling
+    return Card(
+      elevation: 0,
+      color: Colors.blueGrey.withOpacity(0.06),
+      child: Padding(
+        padding: const EdgeInsets.all(12.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Results', style: TextStyle(fontWeight: FontWeight.w600)),
+            const SizedBox(height: 6),
+            Text('Average: ${stats['avg']?.toStringAsFixed(1) ?? '--'} ${_unitForSelected()}'),
+            Text('Highest: ${stats['max']?.toStringAsFixed(0) ?? '--'} ${_unitForSelected()}'),
+            Text('Lowest: ${stats['min']?.toStringAsFixed(0) ?? '--'} ${_unitForSelected()}'),
+            Text('Trend: $trend'),
+          ],
+        ),
+      ),
     );
   }
 
@@ -265,6 +298,12 @@ class _VitalsTrendsScreenState extends State<VitalsTrendsScreen> {
       ..sort((a, b) => a.x.compareTo(b.x));
   }
 
+  List<FlSpot> _getHeartRateData(List<VitalsModel> vitals) {
+    final hr = vitals.where((v) => v.type == VitalType.heartRate && v.heartRate != null);
+    return hr.map((v) => FlSpot(v.timestamp.millisecondsSinceEpoch.toDouble(), v.heartRate!.toDouble())).toList()
+      ..sort((a, b) => a.x.compareTo(b.x));
+  }
+
   Map<String, double> _calculateStatistics(List<VitalsModel> vitals) {
     List<double> values;
     if (_selectedType == 'bloodPressure') {
@@ -276,6 +315,11 @@ class _VitalsTrendsScreenState extends State<VitalsTrendsScreen> {
       values = vitals
           .where((v) => v.type == VitalType.bloodGlucose && v.bloodGlucose != null)
           .map((v) => v.bloodGlucose!)
+          .toList();
+    } else if (_selectedType == 'heartRate') {
+      values = vitals
+          .where((v) => v.type == VitalType.heartRate && v.heartRate != null)
+          .map((v) => v.heartRate!)
           .toList();
     } else {
       values = vitals
@@ -303,11 +347,34 @@ class _VitalsTrendsScreenState extends State<VitalsTrendsScreen> {
       final last = sorted.lastWhere((v) => v.type == VitalType.bloodGlucose && v.bloodGlucose != null, orElse: () => sorted.last);
       if (first.bloodGlucose == null || last.bloodGlucose == null) return 'insufficient data';
       return last.bloodGlucose! < first.bloodGlucose! ? 'improving' : (last.bloodGlucose! > first.bloodGlucose! ? 'declining' : 'stable');
+    } else if (_selectedType == 'glucose') {
+      final first = sorted.firstWhere((v) => v.type == VitalType.bloodGlucose && v.bloodGlucose != null, orElse: () => sorted.first);
+      final last = sorted.lastWhere((v) => v.type == VitalType.bloodGlucose && v.bloodGlucose != null, orElse: () => sorted.last);
+      if (first.bloodGlucose == null || last.bloodGlucose == null) return 'insufficient data';
+      return last.bloodGlucose! < first.bloodGlucose! ? 'improving' : (last.bloodGlucose! > first.bloodGlucose! ? 'declining' : 'stable');
+    } else if (_selectedType == 'heartRate') {
+      final first = sorted.firstWhere((v) => v.type == VitalType.heartRate && v.heartRate != null, orElse: () => sorted.first);
+      final last = sorted.lastWhere((v) => v.type == VitalType.heartRate && v.heartRate != null, orElse: () => sorted.last);
+      if (first.heartRate == null || last.heartRate == null) return 'insufficient data';
+      return last.heartRate! < first.heartRate! ? 'improving' : (last.heartRate! > first.heartRate! ? 'declining' : 'stable');
     } else {
       final first = sorted.firstWhere((v) => v.type == VitalType.weight && v.weight != null, orElse: () => sorted.first);
       final last = sorted.lastWhere((v) => v.type == VitalType.weight && v.weight != null, orElse: () => sorted.last);
       if (first.weight == null || last.weight == null) return 'insufficient data';
       return last.weight! < first.weight! ? 'improving' : (last.weight! > first.weight! ? 'declining' : 'stable');
+    }
+  }
+  String _unitForSelected() {
+    switch (_selectedType) {
+      case 'bloodPressure':
+        return 'mmHg (sys)';
+      case 'glucose':
+        return 'mg/dL';
+      case 'heartRate':
+        return 'bpm';
+      case 'weight':
+      default:
+        return 'kg';
     }
   }
 }

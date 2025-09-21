@@ -4,6 +4,7 @@ import '../core/services/sync_service.dart';
 import '../core/services/notification_service.dart';
 import '../core/utils/health_utils.dart';
 import '../models/vitals_model.dart';
+import '../core/services/sos_alert_service.dart';
 
 class VitalsProvider extends ChangeNotifier {
   final List<VitalsModel> _vitalsHistory = [];
@@ -160,6 +161,7 @@ class VitalsProvider extends ChangeNotifier {
               title: 'Blood Pressure Alert',
               message: 'BP ${v.bloodPressureString} - $category',
             );
+            _prepareSosDraft(v, hint: 'Abnormal blood pressure detected');
           }
         }
         break;
@@ -172,12 +174,52 @@ class VitalsProvider extends ChangeNotifier {
               title: 'Blood Glucose Alert',
               message: 'Glucose ${v.bloodGlucose!.toStringAsFixed(0)} mg/dL - $category',
             );
+            _prepareSosDraft(v, hint: 'Abnormal glucose detected');
           }
         }
         break;
       default:
         break;
     }
+  }
+
+  void _prepareSosDraft(VitalsModel v, {String? hint}) {
+    final latestVitalsMap = <String, String>{};
+    switch (v.type) {
+      case VitalType.bloodPressure:
+        if (v.systolicBP != null && v.diastolicBP != null) {
+          latestVitalsMap['BP'] = v.bloodPressureString;
+        }
+        break;
+      case VitalType.bloodGlucose:
+        if (v.bloodGlucose != null) {
+          latestVitalsMap['Glucose'] = '${v.bloodGlucose!.toStringAsFixed(0)} mg/dL';
+        }
+        break;
+      case VitalType.weight:
+        if (v.weight != null) {
+          latestVitalsMap['Weight'] = '${v.weight!.toStringAsFixed(1)} kg';
+        }
+        break;
+      default:
+        break;
+    }
+
+    final msg = SosAlertService.buildSosMessage(
+      latestVitals: latestVitalsMap.isEmpty ? null : latestVitalsMap,
+      extraNotes: hint,
+    );
+    SosAlertService.saveLastSos({
+      'message': msg,
+      'createdAt': DateTime.now().toIso8601String(),
+      'source': 'auto_threshold',
+    });
+
+    NotificationService.showHealthAlert(
+      title: 'Emergency Attention',
+      message: 'Abnormal vitals detected. Consider using the SOS button.',
+      priority: NotificationPriority.max,
+    );
   }
 
   Future<void> forceSync() async {

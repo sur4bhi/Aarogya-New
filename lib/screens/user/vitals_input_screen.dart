@@ -1,10 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../../core/routes.dart';
+import '../../l10n/app_localizations.dart';
 import '../../providers/vitals_provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../core/services/sync_service.dart';
 import '../../core/utils/health_utils.dart';
 import '../../models/vitals_model.dart';
+import '../../core/services/speech_service.dart';
+import '../../core/services/vitals_measurement_service.dart';
+import '../../providers/language_provider.dart';
 
 class VitalsInputScreen extends StatefulWidget {
   const VitalsInputScreen({super.key});
@@ -221,6 +226,53 @@ class _VitalsInputScreenState extends State<VitalsInputScreen> {
     }
   }
 
+  Future<void> _voiceFill(TextEditingController controller) async {
+    final langCode = mounted ? context.read<LanguageProvider>().languageCode : 'en';
+    final localeId = _mapLangToLocale(langCode);
+    final text = await SpeechService.listenOnce(localeId: localeId);
+    if (text != null && text.trim().isNotEmpty) {
+      final numeric = text.replaceAll(RegExp(r'[^0-9\.]'), '');
+      if (numeric.isNotEmpty) {
+        controller.text = numeric;
+      }
+    }
+  }
+
+  String _mapLangToLocale(String code) {
+    switch (code) {
+      case 'hi':
+        return 'hi-IN';
+      case 'mr':
+        return 'mr-IN';
+      case 'bn':
+        return 'bn-IN';
+      case 'te':
+        return 'te-IN';
+      case 'ta':
+        return 'ta-IN';
+      case 'gu':
+        return 'gu-IN';
+      case 'kn':
+        return 'kn-IN';
+      default:
+        return 'en-IN';
+    }
+  }
+
+  Future<void> _measureHeartRate() async {
+    setState(() => _saving = true);
+    try {
+      final bpm = await VitalsMeasurementService.measureHeartRateFromCamera();
+      if (!mounted) return;
+      final msg = (bpm == null)
+          ? 'Unable to measure heart rate with current device (stub).'
+          : 'Measured heart rate: $bpm bpm';
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -235,12 +287,27 @@ class _VitalsInputScreenState extends State<VitalsInputScreen> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   _sectionTitle('Blood Pressure (mmHg)'),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                      child: TextButton.icon(
+                        onPressed: () => AppRoutes.navigateToMeasureHeartRate(context),
+                        icon: const Icon(Icons.monitor_heart),
+                        label: Text(AppLocalizations.of(context)!.measureHeartRate),
+                      ),
+                  ),
                   Row(
                     children: [
                       Expanded(
                         child: TextFormField(
                           controller: _sysCtrl,
-                          decoration: const InputDecoration(labelText: 'Systolic'),
+                          decoration: InputDecoration(
+                            labelText: 'Systolic',
+                            suffixIcon: IconButton(
+                              tooltip: 'Speak',
+                              icon: const Icon(Icons.mic_none),
+                              onPressed: () => _voiceFill(_sysCtrl),
+                            ),
+                          ),
                           keyboardType: TextInputType.number,
                           validator: _validateSystolic,
                         ),
@@ -249,7 +316,14 @@ class _VitalsInputScreenState extends State<VitalsInputScreen> {
                       Expanded(
                         child: TextFormField(
                           controller: _diaCtrl,
-                          decoration: const InputDecoration(labelText: 'Diastolic'),
+                          decoration: InputDecoration(
+                            labelText: 'Diastolic',
+                            suffixIcon: IconButton(
+                              tooltip: 'Speak',
+                              icon: const Icon(Icons.mic_none),
+                              onPressed: () => _voiceFill(_diaCtrl),
+                            ),
+                          ),
                           keyboardType: TextInputType.number,
                           validator: _validateDiastolic,
                         ),
@@ -259,12 +333,27 @@ class _VitalsInputScreenState extends State<VitalsInputScreen> {
                   const SizedBox(height: 16),
 
                   _sectionTitle('Blood Sugar (mg/dL)'),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: TextButton.icon(
+                      onPressed: () => AppRoutes.navigateToEstimateHemoglobin(context),
+                      icon: const Icon(Icons.bloodtype_outlined),
+                      label: const Text('Estimate Hemoglobin (Camera)'),
+                    ),
+                  ),
                   Row(
                     children: [
                       Expanded(
                         child: TextFormField(
                           controller: _glucoseCtrl,
-                          decoration: const InputDecoration(labelText: 'Glucose'),
+                          decoration: InputDecoration(
+                            labelText: 'Glucose',
+                            suffixIcon: IconButton(
+                              tooltip: 'Speak',
+                              icon: const Icon(Icons.mic_none),
+                              onPressed: () => _voiceFill(_glucoseCtrl),
+                            ),
+                          ),
                           keyboardType: TextInputType.number,
                           validator: _validateGlucose,
                         ),
@@ -292,7 +381,14 @@ class _VitalsInputScreenState extends State<VitalsInputScreen> {
                       Expanded(
                         child: TextFormField(
                           controller: _weightCtrl,
-                          decoration: InputDecoration(labelText: _isKg ? 'kg' : 'lbs'),
+                          decoration: InputDecoration(
+                            labelText: _isKg ? 'kg' : 'lbs',
+                            suffixIcon: IconButton(
+                              tooltip: 'Speak',
+                              icon: const Icon(Icons.mic_none),
+                              onPressed: () => _voiceFill(_weightCtrl),
+                            ),
+                          ),
                           keyboardType: const TextInputType.numberWithOptions(decimal: true),
                           validator: _validateWeight,
                         ),

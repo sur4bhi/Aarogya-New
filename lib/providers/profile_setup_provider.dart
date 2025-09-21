@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import '../models/user_model.dart';
 import '../core/services/local_storage.dart';
+import 'dart:convert';
 
 class ProfileSetupProvider extends ChangeNotifier {
   int _currentStep = 0;
@@ -168,24 +169,29 @@ class ProfileSetupProvider extends ChangeNotifier {
 
   // Persistence
   Future<void> loadDraftProfile() async {
+    debugPrint('ProfileSetupProvider: Starting loadDraftProfile');
     _isLoading = true;
     notifyListeners();
     try {
       final json = LocalStorageService.getString(_draftKey);
+      debugPrint('ProfileSetupProvider: Retrieved draft data: ${json != null ? "exists" : "null"}');
       if (json != null && json.isNotEmpty) {
-        // Stored as JSON string map
-        // ignore: avoid_dynamic_calls
-        _data.addAll(Map<String, dynamic>.from(await Future.value(_decode(json))));
+        _data.addAll(Map<String, dynamic>.from(jsonDecode(json) as Map));
+        debugPrint('ProfileSetupProvider: Loaded draft data successfully');
       }
+    } catch (e) {
+      // Handle any JSON parsing errors gracefully
+      debugPrint('ProfileSetupProvider: Error loading draft profile: $e');
     } finally {
       _isLoading = false;
+      debugPrint('ProfileSetupProvider: Finished loadDraftProfile, isLoading = false');
       notifyListeners();
     }
   }
 
   Future<void> saveProfile() async {
     // Save draft to local storage frequently
-    await LocalStorageService.setString(_draftKey, _encode(_data));
+    await LocalStorageService.setString(_draftKey, jsonEncode(_data));
   }
 
   Future<void> submitCompleteProfile() async {
@@ -194,12 +200,5 @@ class ProfileSetupProvider extends ChangeNotifier {
     await LocalStorageService.remove(_draftKey);
   }
 
-  // Simple JSON encode/decode without adding heavy deps
-  String _encode(Map<String, dynamic> map) => map.toString();
-  Map<String, dynamic> _decode(String str) {
-    // Naive parse: this is a placeholder for proper JSON encode/decode.
-    // Replace with jsonEncode/jsonDecode if needed, but we already have dart:convert in project.
-    // For now, return empty to avoid parsing issues.
-    return {};
-  }
+  // No additional helpers needed as we use jsonEncode/jsonDecode.
 }

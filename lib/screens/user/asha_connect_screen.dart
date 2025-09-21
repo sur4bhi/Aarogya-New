@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../core/constants.dart';
+import 'package:provider/provider.dart';
+import '../../providers/asha_provider.dart';
+import '../../providers/user_provider.dart';
 
 // TODO: import 'package:provider/provider.dart';
 // TODO: import '../../providers/asha_provider.dart';
@@ -18,9 +21,6 @@ class AshaConnectScreen extends StatefulWidget {
 
 class _AshaConnectScreenState extends State<AshaConnectScreen> {
   final _searchCtrl = TextEditingController();
-  bool _loading = false;
-  String? _error;
-  List<Map<String, String>> _results = const [];
 
   @override
   void dispose() {
@@ -29,41 +29,26 @@ class _AshaConnectScreenState extends State<AshaConnectScreen> {
   }
 
   Future<void> _search() async {
-    setState(() {
-      _loading = true;
-      _error = null;
-    });
-    try {
-      final q = _searchCtrl.text.trim();
-      // TODO: final res = await context.read<AshaProvider>().searchAsha(q);
-      final res = [
-        {'id': 'a1', 'name': 'ASHA Priya', 'pin': '411001'},
-        {'id': 'a2', 'name': 'ASHA Meera', 'pin': '411002'},
-      ];
-      setState(() => _results = res);
-      // TODO: cache results to LocalStorage
-    } catch (e) {
-      setState(() => _error = e.toString());
-    } finally {
-      setState(() => _loading = false);
-    }
+    final q = _searchCtrl.text.trim();
+    await context.read<AshaProvider>().search(q);
   }
 
   Future<void> _connect(String ashaId) async {
-    setState(() => _loading = true);
     try {
-      // TODO: await context.read<AshaProvider>().sendConnectionRequest(ashaId);
+      await context.read<AshaProvider>().connectToAsha(
+            ashaId: ashaId,
+            userProvider: context.read<UserProvider>(),
+          );
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Connection request sent')),
+        const SnackBar(content: Text('Connected to ASHA')),
       );
+      Navigator.pop(context);
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error: $e')),
       );
-    } finally {
-      if (mounted) setState(() => _loading = false);
     }
   }
 
@@ -88,6 +73,7 @@ class _AshaConnectScreenState extends State<AshaConnectScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final ashaProvider = context.watch<AshaProvider>();
     return Scaffold(
       appBar: AppBar(title: const Text('Connect ASHA')), // TODO: l10n
       body: Column(
@@ -107,13 +93,13 @@ class _AshaConnectScreenState extends State<AshaConnectScreen> {
                   ),
                 ),
                 const SizedBox(width: 8),
-                ElevatedButton(onPressed: _loading ? null : _search, child: const Text('Search')),
+                ElevatedButton(onPressed: ashaProvider.isLoading ? null : _search, child: const Text('Search')),
               ],
             ),
           ),
-          if (_error != null) Padding(
+          if (ashaProvider.error != null) Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Text(_error!, style: const TextStyle(color: Colors.red)),
+            child: Text(ashaProvider.error!, style: const TextStyle(color: Colors.red)),
           ),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16.0),
@@ -126,19 +112,19 @@ class _AshaConnectScreenState extends State<AshaConnectScreen> {
           ),
           const Divider(),
           Expanded(
-            child: _loading
+            child: ashaProvider.isLoading
                 ? const Center(child: CircularProgressIndicator())
                 : ListView.separated(
-                    itemCount: _results.length,
+                    itemCount: ashaProvider.results.length,
                     separatorBuilder: (_, __) => const Divider(height: 1),
                     itemBuilder: (ctx, i) {
-                      final asha = _results[i];
+                      final asha = ashaProvider.results[i];
                       return ListTile(
                         leading: const CircleAvatar(child: Icon(Icons.medical_services)),
                         title: Text(asha['name'] ?? ''),
                         subtitle: Text('PIN: ${asha['pin']}'),
                         trailing: ElevatedButton(
-                          onPressed: _loading ? null : () => _connect(asha['id']!),
+                          onPressed: ashaProvider.isLoading ? null : () => _connect(asha['id']!),
                           child: const Text('Connect'),
                         ),
                       );

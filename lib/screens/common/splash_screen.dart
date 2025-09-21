@@ -57,17 +57,40 @@ class _SplashScreenState extends State<SplashScreen>
       // Determine first-time and auth state
       final isFirstTime = LocalStorageService.isFirstTimeLaunch();
       final isLoggedIn = context.read<AuthProvider>().isLoggedIn;
+      final role = LocalStorageService.getSetting('user_role');
+
+      debugPrint('Splash Screen Debug:');
+      debugPrint('  isFirstTime: $isFirstTime');
+      debugPrint('  isLoggedIn: $isLoggedIn');
+      debugPrint('  role: $role');
 
       if (!mounted) return;
       if (isFirstTime) {
+        debugPrint('  Navigating to Language Screen');
         AppRoutes.navigateToLanguage(context);
         return;
       }
 
-      if (isLoggedIn) {
-        AppRoutes.navigateToUserDashboard(context);
-      } else {
+      if (role == null) {
+        debugPrint('  Navigating to Role Select Screen');
+        AppRoutes.navigateToRoleSelect(context);
+        return;
+      }
+
+      // If not logged in, go to auth first
+      if (!isLoggedIn) {
+        debugPrint('  Navigating to Auth Screen');
         AppRoutes.navigateToAuth(context);
+        return;
+      }
+
+      // Logged in: go to respective dashboard per selected role
+      if (role == 'asha') {
+        debugPrint('  Navigating to ASHA Dashboard');
+        AppRoutes.navigateToAshaDashboard(context);
+      } else {
+        debugPrint('  Navigating to User Dashboard');
+        AppRoutes.navigateToUserDashboard(context);
       }
     } catch (e) {
       setState(() {

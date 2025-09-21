@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../screens/common/splash_screen.dart';
 import '../screens/common/language_screen.dart';
 import '../screens/common/auth_screen.dart';
+import '../screens/common/role_select_screen.dart';
 
 // User screens
 import '../screens/user/dashboard_screen.dart';
@@ -17,6 +18,12 @@ import '../screens/user/reminders_screen.dart';
 import '../screens/user/reports_upload_screen.dart';
 import '../screens/user/chat_screen.dart';
 import '../screens/user/user_profile_screen.dart';
+import '../screens/user/emergency_hub_screen.dart';
+import '../screens/user/ai_health_coach_screen.dart';
+import '../screens/user/government_services_screen.dart';
+import '../screens/user/heart_rate_measure_screen.dart';
+import '../screens/user/hemoglobin_estimate_screen.dart';
+import '../screens/user/queue_booking_screen.dart';
 
 // ASHA screens
 import '../screens/asha/asha_dashboard_screen.dart';
@@ -24,12 +31,14 @@ import '../screens/asha/patients_list_screen.dart';
 import '../screens/asha/patient_details_screen.dart';
 import '../screens/asha/asha_chat_screen.dart';
 import '../screens/asha/asha_profile_screen.dart';
+import '../screens/asha/visit_scheduler_screen.dart';
 
 class AppRoutes {
   // Route names
   static const String splash = '/';
   static const String language = '/language';
   static const String auth = '/auth';
+  static const String roleSelect = '/role-select';
   
   // User routes
   static const String userDashboard = '/user/dashboard';
@@ -42,6 +51,12 @@ class AppRoutes {
   static const String reportsUpload = '/user/reports-upload';
   static const String userChat = '/user/chat';
   static const String userProfile = '/user/profile';
+  static const String emergencyHub = '/user/emergency';
+  static const String aiCoach = '/user/ai-coach';
+  static const String governmentServices = '/user/government-services';
+  static const String measureHeartRate = '/user/measure-heart-rate';
+  static const String estimateHemoglobin = '/user/estimate-hemoglobin';
+  static const String queueBooking = '/user/queue-booking';
   
   // ASHA routes
   static const String ashaDashboard = '/asha/dashboard';
@@ -49,6 +64,7 @@ class AppRoutes {
   static const String patientDetails = '/asha/patient-details';
   static const String ashaChat = '/asha/chat';
   static const String ashaProfile = '/asha/profile';
+  static const String visitScheduler = '/asha/visit-scheduler';
   
   // Route generator
   static Route<dynamic> generateRoute(RouteSettings settings) {
@@ -68,6 +84,12 @@ class AppRoutes {
       case auth:
         return MaterialPageRoute(
           builder: (_) => const AuthScreen(),
+          settings: settings,
+        );
+        
+      case roleSelect:
+        return MaterialPageRoute(
+          builder: (_) => const RoleSelectScreen(),
           settings: settings,
         );
         
@@ -132,6 +154,42 @@ class AppRoutes {
           settings: settings,
         );
         
+      case emergencyHub:
+        return MaterialPageRoute(
+          builder: (_) => const EmergencyHubScreen(),
+          settings: settings,
+        );
+        
+      case aiCoach:
+        return MaterialPageRoute(
+          builder: (_) => const AiHealthCoachScreen(),
+          settings: settings,
+        );
+        
+      case governmentServices:
+        return MaterialPageRoute(
+          builder: (_) => const GovernmentServicesScreen(),
+          settings: settings,
+        );
+        
+      case measureHeartRate:
+        return MaterialPageRoute(
+          builder: (_) => const HeartRateMeasureScreen(),
+          settings: settings,
+        );
+        
+      case estimateHemoglobin:
+        return MaterialPageRoute(
+          builder: (_) => const HemoglobinEstimateScreen(),
+          settings: settings,
+        );
+        
+      case queueBooking:
+        return MaterialPageRoute(
+          builder: (_) => const QueueBookingScreen(),
+          settings: settings,
+        );
+        
       // ASHA routes
       case ashaDashboard:
         return MaterialPageRoute(
@@ -163,6 +221,12 @@ class AppRoutes {
           settings: settings,
         );
         
+      case visitScheduler:
+        return MaterialPageRoute(
+          builder: (_) => const VisitSchedulerScreen(),
+          settings: settings,
+        );
+        
       default:
         return MaterialPageRoute(
           builder: (_) => const Scaffold(
@@ -186,6 +250,11 @@ class AppRoutes {
   
   static void navigateToAuth(BuildContext context) {
     Navigator.pushNamedAndRemoveUntil(context, auth, (route) => false);
+  }
+  
+  static void navigateToRoleSelect(BuildContext context) {
+    debugPrint('AppRoutes: Navigating to Role Select');
+    Navigator.pushReplacementNamed(context, roleSelect);
   }
   
   static void navigateToUserDashboard(BuildContext context) {
@@ -236,6 +305,30 @@ class AppRoutes {
     Navigator.pushNamed(context, userProfile);
   }
   
+  static void navigateToEmergencyHub(BuildContext context) {
+    Navigator.pushNamed(context, emergencyHub);
+  }
+  
+  static void navigateToAiCoach(BuildContext context) {
+    Navigator.pushNamed(context, aiCoach);
+  }
+  
+  static void navigateToGovernmentServices(BuildContext context) {
+    Navigator.pushNamed(context, governmentServices);
+  }
+  
+  static void navigateToMeasureHeartRate(BuildContext context) {
+    Navigator.pushNamed(context, measureHeartRate);
+  }
+  
+  static void navigateToEstimateHemoglobin(BuildContext context) {
+    Navigator.pushNamed(context, estimateHemoglobin);
+  }
+  
+  static void navigateToQueueBooking(BuildContext context) {
+    Navigator.pushNamed(context, queueBooking);
+  }
+  
   static void navigateToPatientsList(BuildContext context) {
     Navigator.pushNamed(context, patientsList);
   }
@@ -258,5 +351,9 @@ class AppRoutes {
   
   static void navigateToAshaProfile(BuildContext context) {
     Navigator.pushNamed(context, ashaProfile);
+  }
+  
+  static void navigateToVisitScheduler(BuildContext context) {
+    Navigator.pushNamed(context, visitScheduler);
   }
 }

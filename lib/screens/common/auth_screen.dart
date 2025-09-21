@@ -4,6 +4,7 @@ import '../../core/constants.dart';
 import '../../core/routes.dart';
 import '../../core/utils/validators.dart';
 import '../../providers/auth_provider.dart';
+import '../../core/services/local_storage.dart';
 
 /// Auth screen with two flows: Phone OTP and Email login.
 /// - Validates inputs via `Validators`.
@@ -77,7 +78,12 @@ class _AuthScreenState extends State<AuthScreen>
       final otp = _otpCtrl.text.trim();
       await context.read<AuthProvider>().verifyOtp(otp);
       if (!mounted) return;
-      AppRoutes.navigateToUserDashboard(context);
+      final role = LocalStorageService.getSetting('user_role');
+      if (role == 'asha') {
+        AppRoutes.navigateToAshaDashboard(context);
+      } else {
+        AppRoutes.navigateToProfileSetup(context);
+      }
     } catch (e) {
       setState(() => _phoneError = e.toString());
     } finally {
@@ -98,7 +104,12 @@ class _AuthScreenState extends State<AuthScreen>
           .read<AuthProvider>()
           .signInWithEmailAndPassword(email: email, password: password);
       if (!mounted) return;
-      AppRoutes.navigateToUserDashboard(context);
+      final role = LocalStorageService.getSetting('user_role');
+      if (role == 'asha') {
+        AppRoutes.navigateToAshaDashboard(context);
+      } else {
+        AppRoutes.navigateToProfileSetup(context);
+      }
     } catch (e) {
       setState(() => _emailError = e.toString());
     } finally {

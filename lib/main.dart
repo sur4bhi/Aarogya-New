@@ -16,6 +16,10 @@ import 'providers/vitals_provider.dart';
 import 'providers/user_provider.dart';
 import 'providers/connectivity_provider.dart';
 import 'providers/language_provider.dart';
+import 'providers/profile_setup_provider.dart';
+import 'providers/reminders_provider.dart';
+import 'providers/asha_provider.dart';
+import 'providers/reports_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -52,6 +56,10 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => VitalsProvider()),
         ChangeNotifierProvider(create: (_) => ConnectivityProvider()),
         ChangeNotifierProvider(create: (_) => LanguageProvider()..loadSavedLanguage()),
+        ChangeNotifierProvider(create: (_) => ProfileSetupProvider()),
+        ChangeNotifierProvider(create: (_) => RemindersProvider()..loadReminders()),
+        ChangeNotifierProvider(create: (_) => AshaProvider()),
+        ChangeNotifierProvider(create: (_) => ReportsProvider()..loadReports()),
       ],
       child: Builder(
         builder: (context) {

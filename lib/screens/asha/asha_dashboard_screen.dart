@@ -28,13 +28,18 @@ class _AshaDashboardScreenState extends State<AshaDashboardScreen> {
         .collection('users')
         .where('ashaId', isEqualTo: ashaId)
         .where('userType', isEqualTo: 'patient')
-        .orderBy('updatedAt', descending: true)
-        .limit(100)
         .snapshots();
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('ASHA Dashboard'),
+        actions: [
+          IconButton(
+            tooltip: 'Schedule visit',
+            icon: const Icon(Icons.calendar_today),
+            onPressed: () => AppRoutes.navigateToVisitScheduler(context),
+          ),
+        ],
       ),
       body: StreamBuilder<QuerySnapshot>(
         stream: query,
@@ -60,20 +65,37 @@ class _AshaDashboardScreenState extends State<AshaDashboardScreen> {
             return const Center(child: Text('No patients assigned yet'));
           }
 
+          // Sort by updatedAt in descending order (most recent first)
+          docs.sort((a, b) {
+            final aData = a.data() as Map<String, dynamic>;
+            final bData = b.data() as Map<String, dynamic>;
+            final aUpdatedAt = aData['updatedAt'] as Timestamp?;
+            final bUpdatedAt = bData['updatedAt'] as Timestamp?;
+            
+            if (aUpdatedAt == null && bUpdatedAt == null) return 0;
+            if (aUpdatedAt == null) return 1;
+            if (bUpdatedAt == null) return -1;
+            
+            return bUpdatedAt.compareTo(aUpdatedAt); // Descending order
+          });
+
+          // Limit to 100 patients for performance
+          final limitedDocs = docs.take(100).toList();
+
           return Padding(
             padding: const EdgeInsets.all(AppDimensions.paddingMedium),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _buildStatsHeader(docs),
+                _buildStatsHeader(limitedDocs),
                 const SizedBox(height: 12),
                 Expanded(
                   child: ListView.separated(
-                    itemCount: docs.length,
+                    itemCount: limitedDocs.length,
                     separatorBuilder: (_, __) => const SizedBox(height: 8),
                     itemBuilder: (context, index) {
-                      final data = docs[index].data() as Map<String, dynamic>;
-                      final patientId = docs[index].id;
+                      final data = limitedDocs[index].data() as Map<String, dynamic>;
+                      final patientId = limitedDocs[index].id;
                       final name = data['name'] ?? 'Patient';
                       final age = data['age'];
 

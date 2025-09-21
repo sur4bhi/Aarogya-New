@@ -28,15 +28,18 @@ class _LanguageScreenState extends State<LanguageScreen> {
   }
 
   Future<void> _confirm() async {
+    debugPrint('Language Screen: Confirm button pressed');
     await context.read<LanguageProvider>().setLanguage(_selected);
     await LocalStorageService.setFirstTimeLaunch(false);
+    debugPrint('Language Screen: First time launch set to false');
     if (!mounted) return;
-    // In onboarding flow, go to auth; if from settings, pop
-    if (Navigator.canPop(context)) {
-      Navigator.pop(context, _selected);
-    } else {
-      AppRoutes.navigateToAuth(context);
-    }
+    
+    // Small delay to ensure state is saved
+    await Future.delayed(const Duration(milliseconds: 100));
+    
+    // Always navigate to role select for first-time flow
+    debugPrint('Language Screen: Navigating to Role Select');
+    AppRoutes.navigateToRoleSelect(context);
   }
 
   Widget _preview(String code) {
@@ -111,7 +114,7 @@ class _LanguageScreenState extends State<LanguageScreen> {
                 await context.read<LanguageProvider>().setLanguage('en');
                 await LocalStorageService.setFirstTimeLaunch(false);
                 if (!mounted) return;
-                AppRoutes.navigateToAuth(context);
+                AppRoutes.navigateToRoleSelect(context);
               },
               child: Text(l10n.skipForNow),
             ),

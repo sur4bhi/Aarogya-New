@@ -12,6 +12,10 @@ import '../../core/services/sync_service.dart';
 import '../../core/services/local_storage.dart';
 import '../../providers/language_provider.dart';
 import '../../l10n/app_localizations.dart';
+import 'package:url_launcher/url_launcher.dart';
+import '../../core/services/sos_alert_service.dart';
+import '../../core/services/location_service.dart';
+import '../../providers/user_provider.dart';
 
 /// User Dashboard
 /// - Shows greeting, quick actions, vitals summary, health feed preview.
@@ -33,6 +37,154 @@ class _UserDashboardScreenState extends State<UserDashboardScreen> with WidgetsB
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<VitalsProvider>().loadVitalsHistory();
     });
+  }
+
+  Widget _sosFab(BuildContext context) {
+    return FloatingActionButton.extended(
+      onPressed: () => _triggerSos(context),
+      backgroundColor: Colors.red,
+      icon: const Icon(Icons.warning_amber_rounded, color: Colors.white),
+      label: const Text('SOS', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+    );
+  }
+
+  Future<void> _triggerSos(BuildContext context) async {
+    final userProvider = context.read<UserProvider>();
+    var user = userProvider.currentUser;
+    final vitalsProvider = context.read<VitalsProvider>();
+    final latest = vitalsProvider.latestVitals;
+
+    final latestVitalsMap = <String, String>{};
+    if (latest != null) {
+      if (latest.type == VitalType.bloodPressure && latest.systolicBP != null && latest.diastolicBP != null) {
+        latestVitalsMap['BP'] = latest.bloodPressureString;
+      }
+      if (latest.type == VitalType.bloodGlucose && latest.bloodGlucose != null) {
+        latestVitalsMap['Glucose'] = '${latest.bloodGlucose!.toStringAsFixed(0)} mg/dL';
+      }
+      if (latest.type == VitalType.weight && latest.weight != null) {
+        latestVitalsMap['Weight'] = '${latest.weight!.toStringAsFixed(1)} kg';
+      }
+    }
+
+    final locationUrl = await LocationService.getCurrentLocationUrl();
+    final message = SosAlertService.buildSosMessage(
+      name: user.name,
+      latestVitals: latestVitalsMap.isEmpty ? null : latestVitalsMap,
+      locationUrl: locationUrl,
+    );
+
+    // Save and show confirmation locally
+    await SosAlertService.saveLastSos({
+      'userName': user.name,
+      'emergencyContactPhone': user.emergencyContactPhone,
+      'message': message,
+      'createdAt': DateTime.now().toIso8601String(),
+    });
+
+    await SosAlertService.showLocalConfirmation(summary: 'Emergency alert prepared');
+
+    // Ensure we have an emergency contact phone; prompt if missing
+    String? phone = user.emergencyContactPhone;
+    if (phone == null || phone.isEmpty) {
+      phone = await _promptEmergencyContact(context);
+      // Refresh local user snapshot after save
+      user = userProvider.currentUser;
+    }
+
+    if (phone != null && phone.isNotEmpty) {
+      final uri = SosAlertService.buildSmsDeeplink(phoneNumbers: [phone], body: message);
+      try {
+        if (await canLaunchUrl(uri)) {
+          await launchUrl(uri);
+        } else {
+          _showSnackBar(context, 'Could not open SMS app');
+        }
+      } catch (e) {
+        _showSnackBar(context, 'Failed to launch SMS: $e');
+      }
+    } else {
+      _showSnackBar(context, 'No emergency contact phone configured');
+    }
+  }
+
+  void _showSnackBar(BuildContext context, String msg) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+  }
+
+  Future<String?> _promptEmergencyContact(BuildContext context) async {
+    final nameCtrl = TextEditingController();
+    final phoneCtrl = TextEditingController();
+    String? result;
+
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (ctx) {
+        return Padding(
+          padding: EdgeInsets.only(
+            left: 16,
+            right: 16,
+            top: 12,
+            bottom: MediaQuery.of(ctx).viewInsets.bottom + 16,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('Add Emergency Contact', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+              const SizedBox(height: 12),
+              TextField(
+                controller: nameCtrl,
+                decoration: const InputDecoration(labelText: 'Name'),
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: phoneCtrl,
+                keyboardType: TextInputType.phone,
+                decoration: const InputDecoration(labelText: 'Phone (10 digits)'),
+              ),
+              const SizedBox(height: 12),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(ctx),
+                    child: const Text('Cancel'),
+                  ),
+                  const SizedBox(width: 8),
+                  FilledButton(
+                    onPressed: () async {
+                      final name = nameCtrl.text.trim();
+                      final phone = phoneCtrl.text.trim();
+                      if (phone.length != 10) {
+                        ScaffoldMessenger.of(ctx).showSnackBar(
+                          const SnackBar(content: Text('Please enter a valid 10-digit phone number')),
+                        );
+                        return;
+                      }
+                      final userProv = context.read<UserProvider>();
+                      final updated = userProv.currentUser.copyWith(
+                        emergencyContactName: name.isEmpty ? null : name,
+                        emergencyContactPhone: phone,
+                        updatedAt: DateTime.now(),
+                      );
+                      await userProv.updateUserProfile(updated);
+                      result = phone;
+                      if (context.mounted) Navigator.pop(ctx);
+                    },
+                    child: const Text('Save'),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        );
+      },
+    );
+
+    return result;
   }
 
   @override
@@ -127,12 +279,14 @@ class _UserDashboardScreenState extends State<UserDashboardScreen> with WidgetsB
           ),
         ],
       ),
+      floatingActionButton: _sosFab(context),
     );
   }
 
   Widget _quickActions(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    return Wrap(
+      spacing: 16,
+      runSpacing: 12,
       children: [
         _quickAction(
           context,
@@ -157,6 +311,30 @@ class _UserDashboardScreenState extends State<UserDashboardScreen> with WidgetsB
           icon: Icons.access_alarm,
           label: AppLocalizations.of(context)!.reminders,
           onTap: () => AppRoutes.navigateToReminders(context),
+        ),
+        _quickAction(
+          context,
+          icon: Icons.monitor_heart,
+          label: AppLocalizations.of(context)!.heartRate,
+          onTap: () => AppRoutes.navigateToMeasureHeartRate(context),
+        ),
+        _quickAction(
+          context,
+          icon: Icons.sos,
+          label: 'Emergency',
+          onTap: () => AppRoutes.navigateToEmergencyHub(context),
+        ),
+        _quickAction(
+          context,
+          icon: Icons.psychology_alt_outlined,
+          label: 'AI Coach',
+          onTap: () => AppRoutes.navigateToAiCoach(context),
+        ),
+        _quickAction(
+          context,
+          icon: Icons.account_balance_outlined,
+          label: 'Govt Services',
+          onTap: () => AppRoutes.navigateToGovernmentServices(context),
         ),
       ],
     );
@@ -196,30 +374,70 @@ class _UserDashboardScreenState extends State<UserDashboardScreen> with WidgetsB
         String bpValue = '--';
         String glucoseValue = '--';
         String weightValue = '--';
+        String hrValue = '--';
 
-        // Find latest entries for each type
-        final latestBp = history.firstWhere(
-          (v) => v.type == VitalType.bloodPressure && v.systolicBP != null && v.diastolicBP != null,
-          orElse: () => provider.latestVitals ?? (history.isNotEmpty ? history.first : null as dynamic),
-        );
-        if (latestBp is VitalsModel && latestBp.type == VitalType.bloodPressure) {
+        // Find latest BP
+        VitalsModel? latestBp;
+        try {
+          latestBp = history.firstWhere(
+            (v) => v.type == VitalType.bloodPressure && v.systolicBP != null && v.diastolicBP != null,
+          );
+        } catch (_) {
+          final l = provider.latestVitals;
+          if (l != null && l.type == VitalType.bloodPressure && l.systolicBP != null && l.diastolicBP != null) {
+            latestBp = l;
+          }
+        }
+        if (latestBp != null) {
           bpValue = latestBp.bloodPressureString;
         }
 
-        final latestGlucose = history.firstWhere(
-          (v) => v.type == VitalType.bloodGlucose && v.bloodGlucose != null,
-          orElse: () => provider.latestVitals ?? (history.isNotEmpty ? history.first : null as dynamic),
-        );
-        if (latestGlucose is VitalsModel && latestGlucose.type == VitalType.bloodGlucose) {
+        // Find latest glucose
+        VitalsModel? latestGlucose;
+        try {
+          latestGlucose = history.firstWhere(
+            (v) => v.type == VitalType.bloodGlucose && v.bloodGlucose != null,
+          );
+        } catch (_) {
+          final l = provider.latestVitals;
+          if (l != null && l.type == VitalType.bloodGlucose && l.bloodGlucose != null) {
+            latestGlucose = l;
+          }
+        }
+        if (latestGlucose != null) {
           glucoseValue = latestGlucose.bloodGlucose!.toStringAsFixed(0);
         }
 
-        final latestWeight = history.firstWhere(
-          (v) => v.type == VitalType.weight && v.weight != null,
-          orElse: () => provider.latestVitals ?? (history.isNotEmpty ? history.first : null as dynamic),
-        );
-        if (latestWeight is VitalsModel && latestWeight.type == VitalType.weight) {
+        // Find latest weight
+        VitalsModel? latestWeight;
+        try {
+          latestWeight = history.firstWhere(
+            (v) => v.type == VitalType.weight && v.weight != null,
+          );
+        } catch (_) {
+          final l = provider.latestVitals;
+          if (l != null && l.type == VitalType.weight && l.weight != null) {
+            latestWeight = l;
+          }
+        }
+        if (latestWeight != null) {
           weightValue = latestWeight.weight!.toStringAsFixed(1);
+        }
+
+        // Find latest heart rate
+        VitalsModel? latestHr;
+        try {
+          latestHr = history.firstWhere(
+            (v) => v.type == VitalType.heartRate && v.heartRate != null,
+          );
+        } catch (_) {
+          final l = provider.latestVitals;
+          if (l != null && l.type == VitalType.heartRate && l.heartRate != null) {
+            latestHr = l;
+          }
+        }
+        if (latestHr != null) {
+          hrValue = latestHr.heartRate!.toStringAsFixed(0);
         }
 
         return Column(
@@ -247,7 +465,26 @@ class _UserDashboardScreenState extends State<UserDashboardScreen> with WidgetsB
               ],
             ),
             const SizedBox(height: 8),
-            VitalsCard(title: AppLocalizations.of(context)!.weight, value: weightValue, unit: 'kg'),
+            Row(
+              children: [
+                Expanded(
+                  child: VitalsCard(title: AppLocalizations.of(context)!.weight, value: weightValue, unit: 'kg'),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: VitalsCard(
+                    title: AppLocalizations.of(context)!.heartRate,
+                    value: hrValue,
+                    unit: 'bpm',
+                    footer: _HeartRateSparkline(values: history
+                        .where((v) => v.type == VitalType.heartRate && v.heartRate != null)
+                        .take(20)
+                        .map((v) => v.heartRate!)
+                        .toList()),
+                  ),
+                ),
+              ],
+            ),
           ],
         );
       },
@@ -372,4 +609,64 @@ class _UserDashboardScreenState extends State<UserDashboardScreen> with WidgetsB
       },
     );
   }
+}
+
+class _HeartRateSparkline extends StatelessWidget {
+  final List<double> values;
+  const _HeartRateSparkline({required this.values});
+
+  @override
+  Widget build(BuildContext context) {
+    if (values.length < 2) return const SizedBox.shrink();
+    return SizedBox(
+      height: 28,
+      child: CustomPaint(
+        painter: _SparklinePainter(values),
+        size: const Size(double.infinity, 28),
+      ),
+    );
+  }
+}
+
+class _SparklinePainter extends CustomPainter {
+  final List<double> values;
+  _SparklinePainter(this.values);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = Colors.purple
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2.0
+      ..isAntiAlias = true;
+
+    final minV = values.reduce((a, b) => a < b ? a : b);
+    final maxV = values.reduce((a, b) => a > b ? a : b);
+    final range = (maxV - minV).abs() < 1e-6 ? 1.0 : (maxV - minV);
+
+    final path = Path();
+    for (int i = 0; i < values.length; i++) {
+      final x = i * (size.width / (values.length - 1));
+      final norm = (values[i] - minV) / range;
+      final y = size.height - norm * size.height;
+      if (i == 0) {
+        path.moveTo(x, y);
+      } else {
+        path.lineTo(x, y);
+      }
+    }
+
+    // Baseline
+    final basePaint = Paint()
+      ..color = Colors.purple.withOpacity(0.25)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.0;
+    final midY = size.height / 2;
+    canvas.drawLine(Offset(0, midY), Offset(size.width, midY), basePaint);
+
+    canvas.drawPath(path, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
 }

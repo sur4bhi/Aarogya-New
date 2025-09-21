@@ -4,6 +4,8 @@ import 'dart:ui' show Size, Rect;
 import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
 import 'package:image/image.dart' as img;
 import 'package:image_picker/image_picker.dart';
+import '../utils/medical_ocr_parser.dart';
+import '../../models/medical_ocr_models.dart';
 
 class OCRService {
   static final TextRecognizer _textRecognizer = TextRecognizer();
@@ -112,6 +114,57 @@ class OCRService {
     }
   }
   
+  // Medical-specific single page processing
+  static Future<MedicalOCRResult> processMedicalDocument(String imagePath) async {
+    try {
+      // Optional: pre-process for better accuracy
+      final processedPath = await preprocessMedicalImage(imagePath);
+      final file = File(processedPath);
+      final ocrResult = await extractTextFromImage(file);
+      if (!ocrResult.success || (ocrResult.text == null || ocrResult.text!.trim().isEmpty)) {
+        return MedicalOCRResult(rawText: ocrResult.text ?? '', confidence: 0.0);
+      }
+      final parsed = MedicalOCRParser.parseExtractedText(ocrResult.text!);
+      return parsed;
+    } catch (e) {
+      return MedicalOCRResult(rawText: '', confidence: 0.0);
+    }
+  }
+
+  // Medical-specific multi-page processing
+  static Future<List<MedicalOCRResult>> processMultiPageReport(List<String> imagePaths) async {
+    final results = <MedicalOCRResult>[];
+    for (var i = 0; i < imagePaths.length; i++) {
+      results.add(await processMedicalDocument(imagePaths[i]));
+    }
+    return results;
+  }
+
+  // Validate image quality for medical OCR
+  static bool validateMedicalImageQuality(String imagePath) {
+    try {
+      final file = File(imagePath);
+      if (!file.existsSync()) return false;
+      if (file.lengthSync() < 50 * 1024) return false; // basic size check
+      final decoded = img.decodeImage(file.readAsBytesSync());
+      if (decoded == null) return false;
+      // Minimal resolution check
+      return decoded.width >= 800 && decoded.height >= 800;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  // Preprocess and return path
+  static Future<String> preprocessMedicalImage(String imagePath) async {
+    try {
+      final processed = await preprocessImage(File(imagePath));
+      return processed.path;
+    } catch (_) {
+      return imagePath;
+    }
+  }
+
   // Process medical report
   static Future<MedicalReportData> processMedicalReport(File imageFile) async {
     try {

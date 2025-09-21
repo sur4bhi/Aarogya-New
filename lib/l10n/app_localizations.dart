@@ -8,6 +8,11 @@ import 'package:intl/intl.dart' as intl;
 import 'app_localizations_en.dart';
 import 'app_localizations_hi.dart';
 import 'app_localizations_mr.dart';
+import 'app_localizations_bn.dart';
+import 'app_localizations_te.dart';
+import 'app_localizations_ta.dart';
+import 'app_localizations_gu.dart';
+import 'app_localizations_kn.dart';
 
 // ignore_for_file: type=lint
 
@@ -94,7 +99,12 @@ abstract class AppLocalizations {
   static const List<Locale> supportedLocales = <Locale>[
     Locale('en'),
     Locale('hi'),
-    Locale('mr')
+    Locale('mr'),
+    Locale('bn'),
+    Locale('te'),
+    Locale('ta'),
+    Locale('gu'),
+    Locale('kn'),
   ];
 
   /// No description provided for @appName.
@@ -179,6 +189,7 @@ abstract class AppLocalizations {
   String get bloodPressure;
   String get bloodSugar;
   String get weight;
+  String get heartRate;
   String get latestVitals;
   String get seeTrends;
   String get healthFeed;
@@ -187,10 +198,60 @@ abstract class AppLocalizations {
   String get uploadReport;
   String get connectAsha;
   String get reminders;
+  String get measureHeartRate;
+  String get quality;
   String get syncedSuccessfully;
   String get syncFailed;
   String get offlineBanner;
   String pendingSyncItems(int count);
+
+  // Reports Upload UI
+  String get capturePhoto;
+  String get selectFromGallery;
+  String get choosePDF;
+  String get scanningTips;
+
+  // Profile Setup labels
+  String get personalInformation;
+  String get addressInformation;
+  String get healthInformation;
+  String get medicalHistory;
+  String get healthGoals;
+  String get fullName;
+  String get dateOfBirth;
+  String get gender;
+  String get male;
+  String get female;
+  String get other;
+  String get emergencyContact;
+  String get address;
+  String get village;
+  String get district;
+  String get state;
+  String get pincode;
+  String get heightLabel;
+  String get weightLabel;
+  String get bloodGroup;
+  String get chronicConditions;
+  String get allergies;
+  String get currentMedications;
+  String get familyMedicalHistory;
+  String get dataConsent;
+  String get profileIncomplete;
+  String get step;
+  String get ofLabel;
+  String get next;
+  String get previous;
+  String get save;
+  String get complete;
+
+  // Condition labels
+  String get diabetes;
+  String get hypertension;
+  String get heartDisease;
+  String get asthma;
+  String get kidneyDisease;
+  String get thyroid;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {
@@ -202,7 +263,7 @@ class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> 
   }
 
   @override
-  bool isSupported(Locale locale) => <String>['en', 'hi', 'mr'].contains(locale.languageCode);
+  bool isSupported(Locale locale) => <String>['en', 'hi', 'mr', 'bn', 'te', 'ta', 'gu', 'kn'].contains(locale.languageCode);
 
   @override
   bool shouldReload(_AppLocalizationsDelegate old) => false;
@@ -216,6 +277,11 @@ AppLocalizations lookupAppLocalizations(Locale locale) {
     case 'en': return AppLocalizationsEn();
     case 'hi': return AppLocalizationsHi();
     case 'mr': return AppLocalizationsMr();
+    case 'bn': return AppLocalizationsBn();
+    case 'te': return AppLocalizationsTe();
+    case 'ta': return AppLocalizationsTa();
+    case 'gu': return AppLocalizationsGu();
+    case 'kn': return AppLocalizationsKn();
   }
 
   throw FlutterError(

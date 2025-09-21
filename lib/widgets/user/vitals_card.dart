@@ -4,7 +4,8 @@ class VitalsCard extends StatelessWidget {
   final String title;
   final String value;
   final String unit;
-  const VitalsCard({super.key, required this.title, required this.value, required this.unit});
+  final Widget? footer;
+  const VitalsCard({super.key, required this.title, required this.value, required this.unit, this.footer});
 
   @override
   Widget build(BuildContext context) {
@@ -17,6 +18,10 @@ class VitalsCard extends StatelessWidget {
             Text(title, style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 8),
             Text('$value $unit', style: Theme.of(context).textTheme.headlineSmall),
+            if (footer != null) ...[
+              const SizedBox(height: 8),
+              footer!,
+            ],
           ],
         ),
       ),
