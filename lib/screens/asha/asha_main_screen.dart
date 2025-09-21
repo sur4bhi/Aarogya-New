@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import '../../core/constants.dart';
 import 'asha_dashboard_screen.dart';
-import '../health_feed_screen.dart';
+import '../user/health_feed_screen.dart';
 import '../chat_list_screen.dart';
-import 'asha_patients_screen.dart';
+import 'patients_list_screen.dart';
 import 'asha_profile_screen.dart';
 
 class ASHAMainScreen extends StatefulWidget {
@@ -17,11 +17,11 @@ class _ASHAMainScreenState extends State<ASHAMainScreen> {
   int _selectedIndex = 0;
 
   final List<Widget> _pages = [
-    const ASHADashboardScreen(),
+    const AshaDashboardScreen(),
     const HealthFeedScreen(),
     const ChatListScreen(),
-    const ASHAPatientsScreen(),
-    const ASHAProfileScreen(),
+    const PatientsListScreen(),
+    const AshaProfileScreen(),
   ];
 
   @override
